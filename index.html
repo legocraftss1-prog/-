@@ -9,9 +9,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="МГИАГ">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="net-config.js"></script>
+<script src="net.js"></script>
 <script>
-/* PWA build: no claude.ai channel here — online mode will come later */
-window.claude=window.claude||{use:async()=>null};window.IS_PWA=true;
+/* PWA build: the «Вместе» room runs on Firebase (net.js) instead of claude.ai */
+window.claude=window.claude||{use:async n=>n==='room'?window.NET:null};window.IS_PWA=true;
 if('serviceWorker' in navigator&&location.protocol!=='file:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 
@@ -5351,7 +5355,7 @@ function setupTitle(){migrateSlots();const bt=$('title').querySelector('.bt');bt
   $('bPlay').disabled=false;main();}
 
 /* ---------------- room connection ---------------- */
-async function coopConnect(code,host){COOP.err='';const ns=await claude.use('room');if(!ns){COOP.err='Игра по сети в приложении появится в следующем обновлении. Пока — одиночная игра.';return false;}
+async function coopConnect(code,host){COOP.err='';const ns=await claude.use('room');if(!ns){COOP.err='Сеть не настроена: впиши ключ Firebase в файл net-config.js (см. инструкцию) и перезапусти игру.';return false;}
   try{COOP.R=await ns.join('mg-'+code);}catch(e){COOP.err='Не получилось подключиться ('+(e.code||'ошибка')+').';return false;}
   COOP.code=code;COOP.host=host;COOP.R.onPeers(coopPeers,()=>{});
   ['save','gsync','hsync'].forEach(t=>COOP.R.on(t,m=>{if(!m.sameTab)bigPart(t,m.data);},()=>{}));
