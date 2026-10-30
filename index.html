@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ru">
 <head>
 <meta charset="utf-8">
@@ -43,6 +42,11 @@ canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-actio
 button{font-family:var(--ui);cursor:pointer;touch-action:manipulation}
 button:focus-visible{outline:3px solid var(--lamp);outline-offset:2px}
 .hidden{display:none!important}
+
+/* 1.11 improved UI profile: visual polish only; layout and controls remain unchanged. */
+html.graphics-improved .sq,html.graphics-improved .pbtn{filter:saturate(1.12);box-shadow:0 5px 16px rgba(65,145,220,.22),0 3px 0 rgba(0,0,0,.35);}
+html.graphics-improved #phone,html.graphics-improved #sheet{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+html.graphics-improved .modal,html.graphics-improved .sheet{border-color:rgba(150,205,255,.32);}
 
 /* ---------- HUD ---------- */
 #hud{position:fixed;left:0;right:0;top:0;pointer-events:none;z-index:5}
@@ -101,7 +105,6 @@ body.busy #controls *{pointer-events:none}
 #bSkate{right:8px;bottom:98px;width:62px;height:62px;background:#7a4ad8;font-size:26px}
 #bPush{right:92px;bottom:78px;width:76px;height:76px;background:#2fae5b;font-size:34px}
 #bJump{right:100px;bottom:80px;width:62px;height:62px;background:#e86a2b;font-size:26px}
-#bDive{right:100px;bottom:80px;width:62px;height:62px;background:#168bc2;font-size:26px}
 #bTrick{right:100px;bottom:164px;width:58px;height:58px;background:#d84a8a;font-size:26px}
 #bExit{right:96px;bottom:2px;width:64px;height:64px;background:#4a5a7a;font-size:28px}
 #bHorn{right:8px;bottom:98px;width:62px;height:62px;background:#7a4ad8;font-size:26px}
@@ -256,7 +259,6 @@ body.busy #controls *{pointer-events:none}
     <button id="bSkate" class="hidden" aria-label="Скейт">🛹</button>
     <button id="bPush" class="hidden" aria-label="Оттолкнуться">👟</button>
     <button id="bJump" aria-label="Прыжок">⤴️</button>
-    <button id="bDive" class="hidden" aria-label="Нырнуть или всплыть">🤿</button>
     <button id="bTrick" class="hidden" aria-label="Трюк">🎯</button>
     <button id="bFire" class="hidden" aria-label="Огонь">💥</button>
     <button id="bWeap" class="hidden" aria-label="Оружие">🔫</button>
@@ -302,9 +304,6 @@ body.busy #controls *{pointer-events:none}
 'use strict';
 /* ================= helpers ================= */
 const TAU=Math.PI*2;
-let LAKE_WATER_Y=16.18;
-function inLake(x,z){return Math.pow((x+392)/26,2)+Math.pow((z+20)/48,2)<.94;}
-
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -321,42 +320,37 @@ function seeded(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.
 const canvas=$('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
+// 1.11: graphics profile is independent from the player's game save.
+let GRAPHICS_MODE='classic';
+try{GRAPHICS_MODE=localStorage.getItem('mgiag_graphics_111')==='improved'?'improved':'classic';}catch(e){}
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(62,1,0.1,620);
 const SKY_DAY=new THREE.Color(0xb7d2ea),SKY_NIGHT=new THREE.Color(0x0a0f22),SKY_SNOW=new THREE.Color(0xcfd5dd);
 scene.background=SKY_DAY.clone();
 const fog=new THREE.Fog(0xb7d2ea,50,175);scene.fog=fog;
+function applyGraphicsMode(mode,notify){
+  GRAPHICS_MODE=mode==='improved'?'improved':'classic';
+  try{localStorage.setItem('mgiag_graphics_111',GRAPHICS_MODE);}catch(e){}
+  const improved=GRAPHICS_MODE==='improved';
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,improved?2:1.6));
+  renderer.toneMapping=improved?THREE.ACESFilmicToneMapping:THREE.NoToneMapping;
+  renderer.toneMappingExposure=improved?1.12:1;
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  camera.far=improved?760:620;camera.updateProjectionMatrix();
+  fog.far=improved?220:175;
+  hemi.intensity=improved?1.08:.95;sun.intensity=improved?.9:.75;
+  document.documentElement.classList.toggle('graphics-improved',improved);
+  resize();
+  if(notify&&typeof toast==='function')toast(improved?'✨ Улучшенная графика включена':'🎮 Классическая графика включена',1800);
+}
+
 const hemi=new THREE.HemisphereLight(0xeaf4ff,0x5e604c,0.95);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff0d8,0.75);sun.position.set(40,80,30);scene.add(sun);
 const pLight=new THREE.PointLight(0xffe2b0,0,16,1.4);scene.add(pLight);
 const fLights=[];for(let i=0;i<4;i++){const l=new THREE.PointLight(0xffffff,0,30,1.1);scene.add(l);fLights.push(l);}
-/* ================= graphics presets 1.11 ================= */
-const GRAPHICS_KEY='mgiag_graphics_mode';
-let GRAPHICS_MODE='classic';
-try{GRAPHICS_MODE=localStorage.getItem(GRAPHICS_KEY)==='improved'?'improved':'classic';}catch(_){}
-function applyGraphicsMode(mode){
-  GRAPHICS_MODE=mode==='improved'?'improved':'classic';
-  try{localStorage.setItem(GRAPHICS_KEY,GRAPHICS_MODE);}catch(_){}
-  const improved=GRAPHICS_MODE==='improved';
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,improved?1.85:1.6));
-  renderer.shadowMap.enabled=improved;
-  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-  renderer.toneMapping=improved?THREE.ACESFilmicToneMapping:THREE.NoToneMapping;
-  renderer.toneMappingExposure=improved?1.05:1;
-  if('outputEncoding' in renderer)renderer.outputEncoding=improved?THREE.sRGBEncoding:THREE.LinearEncoding;
-  sun.castShadow=improved;
-  if(improved){
-    sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.near=1;sun.shadow.camera.far=260;
-    sun.shadow.camera.left=-110;sun.shadow.camera.right=110;sun.shadow.camera.top=110;sun.shadow.camera.bottom=-110;
-    sun.shadow.bias=-0.00025;sun.shadow.radius=3;
-    hemi.intensity=1.05;sun.intensity=1.05;fog.near=65;fog.far=225;
-    if(scene.traverse)scene.traverse(o=>{if(o.isMesh&&o.visible){o.castShadow=o.userData.st!==false;o.receiveShadow=true;}});
-  }else{hemi.intensity=.95;sun.intensity=.75;fog.near=50;fog.far=175;}
-  resize();
-}
-applyGraphicsMode(GRAPHICS_MODE);
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
+applyGraphicsMode(GRAPHICS_MODE,false);
 
 const cityG=new THREE.Group(),factG=new THREE.Group(),shopG=new THREE.Group();
 scene.add(cityG,factG,shopG);factG.visible=false;shopG.visible=false;
@@ -2990,7 +2984,7 @@ function updDrive(c,dt){const v=c.drive,T=VEH_TYPES[v.type];
   if(blocked()){jx=jy=0;}jx=clamp(jx,-1,1);jy=clamp(jy,-1,1);FLY.boost=FLY.boostBtn||keys.ShiftLeft||keys.ShiftRight;
   if(v.fly){const r=updFlight(v,dt,jx,jy);if(r==='land'){v.fly=null;if(v.wings)v.wings.visible=false;v.v=Math.min(v.v,8);toast('🛬 Посадка. Мягкая. Почти.');}
     v.g.position.set(v.pos.x,v.pos.y,v.pos.z);v.g.rotation.y=v.yaw;v.g.rotation.x=v.fly?-clamp(v.fly.vy/18,-.4,.4):0;v.g.rotation.z=-jx*.25;}
-  else{const thr=(v.dead||v.waterDisabled)?0:-jy;if(v.dead||v.waterDisabled)jx=0;
+  else{const thr=v.dead?0:-jy;if(v.dead)jx=0;
     if(thr>.1)v.v+=T.acc*thr*dt;else if(thr<-.1)v.v+=(v.v>.5?-12:-T.acc*.6)*(-thr)*dt;else v.v*=1-.7*dt;
     const fx=Math.sin(v.yaw),fz=Math.cos(v.yaw),sl=(H(v.pos.x+fx*1.5,v.pos.z+fz*1.5)-H(v.pos.x-fx*1.5,v.pos.z-fz*1.5))/3;
     v.v-=sl*9.8*.5*dt;v.v=clamp(v.v,-6,T.max*(FLY.boost&&T.fly?1.2:1));
@@ -2998,12 +2992,7 @@ function updDrive(c,dt){const v=c.drive,T=VEH_TYPES[v.type];
     const mx_=Math.sin(v.vang),mz_=Math.cos(v.vang);v.pos.x+=mx_*v.v*dt;v.pos.z+=mz_*v.v*dt;if(Math.abs(wrapA(v.yaw-v.vang))>.2&&Math.abs(v.v)>10&&Math.random()<dt*25)puffAt(v.pos.x-fx*1.8,v.pos.y+.2,v.pos.z-fz*1.8,0xcccccc,1);
     if(typeof lampHit==='function')lampHit(dt);
     if(collide(v.pos,T.bike?.7:1.45,H(v.pos.x,v.pos.z))){v.vang=v.yaw;if(Math.abs(v.v)>18)carDamage(v,(Math.abs(v.v)-17)*1.2,'self');if(Math.abs(v.v)>6){toast('БАМ! 🚗💥',1200);sfx('bonk');}v.v*=-.3;}
-    v.pos.x=clamp(v.pos.x,-WORLD_R+3,WORLD_R-3);v.pos.z=clamp(v.pos.z,-WORLD_R+3,WORLD_R-3);
-    const inWater=area==='city'&&inLake(v.pos.x,v.pos.z);
-    if(inWater){v.waterTime=(v.waterTime||0)+dt;v.v*=Math.max(0,1-dt*.9);if(v.waterTime>=30){v.waterDisabled=true;v.dmg=Math.max(v.dmg||0,70);v.waterSink=Math.min(1.8,(v.waterSink||0)+dt*.12);if(Math.random()<dt*2.2)puffAt(v.pos.x,v.pos.y+1.1-(v.waterSink||0),v.pos.z,0x55585b,1.4);v.pos.y=LAKE_WATER_Y+.15-(v.waterSink||0);if(v.waterTime>34)v.v=0;if(v.waterSink>1.25){v.waterDrownTimer=(v.waterDrownTimer||0)+dt;if(v.waterDrownTimer>=2){v.waterDrownTimer=0;hurtPlayer(8);}}}}
-    else if(!v.waterDisabled){v.waterTime=0;v.waterSink=0;}
-    if(!inWater)carPhysics(v,T,dt,jx);else{v.pos.y=LAKE_WATER_Y+.15-(v.waterSink||0);v.air=false;}
-    carVisual(v,T,dt,jx,sl);
+    v.pos.x=clamp(v.pos.x,-WORLD_R+3,WORLD_R-3);v.pos.z=clamp(v.pos.z,-WORLD_R+3,WORLD_R-3);carPhysics(v,T,dt,jx);carVisual(v,T,dt,jx,sl);
     peds.forEach(a=>{if(a.inactive)return;const d=d2(a.pos,v.pos);if(d<2.2&&Math.abs(v.v)>2){const dx=a.pos.x-v.pos.x,dz=a.pos.z-v.pos.z;a.pos.x+=dx/(d||1)*1.2;a.pos.z+=dz/(d||1)*1.2;
       if(!a.bub){bubble(a,pick(['ВЫ ЧТО?!','Тротуар — для людей!','Права купил?!']),2.2);a.mood='flee';a.moodT=5;a.chase=0;}}});
     if(wet>.4&&Math.abs(v.v)>6&&Math.random()<dt*6)puffAt(v.pos.x-fx*2,v.pos.y+.2,v.pos.z-fz*2,0xc4d6e6,1);
@@ -3791,7 +3780,7 @@ function stall(x,z,ry,col,label){const g=new THREE.Group();g.position.set(x,H(x,
 const BIZ_SITE={x:-120,z:-395};const LUX={x:414,z:38},MOTO={x:410,z:122},GATE={x:396,z:-70};const DOCS_SPOT={x:-259,z:-99};const FOREST={x:0,z:2600};
 function buildWorld2(){BA='city';R13=seeded('moscow-goose-1.1-big');
   // pads first
-  const lakeY=addPad(-428,-356,-80,40,16);LAKE_WATER_Y=lakeY+.18;const bizY=addPad(-150,-90,-418,-372,16);const luxY=addPad(398,432,18,58,12);const motoY=addPad(398,428,108,138,12);
+  const lakeY=addPad(-428,-356,-80,40,16);const bizY=addPad(-150,-90,-418,-372,16);const luxY=addPad(398,432,18,58,12);const motoY=addPad(398,428,108,138,12);
   const marketY=addPad(-140,-84,342,374,12);const jkY=addPad(400,434,-126,-14,14);const railY2=PADS[0].h;addPad(-436,-266,-258,-242,26,railY2);addPad(266,436,-258,-242,26,railY2);
   // ---- ring boulevard (smooth superellipse) and connectors
   const ring=[];for(let i=0;i<=160;i++)ring.push(ringPt(i/160*TAU));road(ring,12);
@@ -3827,7 +3816,7 @@ function buildWorld2(){BA='city';R13=seeded('moscow-goose-1.1-big');
   DISTRICTS.unshift({n:'Парк «Гусиное озеро»',x0:-436,x1:-345,z0:-260,z1:260,c:'#5f9a5a'});
   const lake=new THREE.Mesh(new THREE.CircleGeometry(1,40),new THREE.MeshPhongMaterial({color:0x4f8fbf,shininess:90,specular:0x88aacc,transparent:true,opacity:.92}));
   lake.rotation.x=-Math.PI/2;lake.scale.set(26,48,1);lake.position.set(-392,lakeY+.18,-20);cityG.add(lake);
-  // The lake is intentionally swimmable in 1.11; remove the old invisible collision barriers.
+  // Water area is traversable; shoreline path and surrounding park props keep their own collisions.
   const shore=[];for(let i=0;i<=48;i++){const a=i/48*TAU;shore.push([-392+Math.cos(a)*33,-20+Math.sin(a)*55]);}ribbon(shore,2.6,walkMat,.08);ROADS.push({pts:shore,w:0});
   ribbon(catmull([[-335,-60],[-350,-48],[-362,-30]],3),2.4,walkMat,.08);ribbon(catmull([[-335,60],[-352,45],[-362,30]],3),2.4,walkMat,.08);
   ribbon(catmull([[-392,-75],[-392,-110],[-370,-170],[-380,-230]],3),2.4,walkMat,.08);ribbon(catmull([[-392,35],[-392,80],[-372,150],[-385,220]],3),2.4,walkMat,.08);
@@ -4083,8 +4072,11 @@ renderPhone=function(){if(!['invites','settings','dev'].includes(phoneApp)){_ren
       rowBtn(b,'❌ Отказаться','','Нет',()=>{SKEV.state='none';notify('Отказ отправлен. Позовут в другой раз.','🛹');renderPhone();});}
     else if(SKEV.state==='accepted')line('⭐ Ты участвуешь: скейт-парк «Доска», сегодня с 18:00. Метка на карте.');
     else line('Новых приглашений нет. Они приходят, когда изучено 4+ трюка — не чаще раза в пару игровых дней.');}
-  if(phoneApp==='settings'){h.textContent='⚙️ Настройки · VERSION 1.11 (тест)';
-    rowBtn(b,'🎨 Графика: '+(GRAPHICS_MODE==='improved'?'Улучшенная':'Классическая'),GRAPHICS_MODE==='improved'?'больше эффектов и дальность':'исходный вид игры',GRAPHICS_MODE==='improved'?'Классическая':'Улучшенная',()=>{applyGraphicsMode(GRAPHICS_MODE==='improved'?'classic':'improved');renderPhone();});
+  if(phoneApp==='settings'){h.textContent='⚙️ Настройки · VERSION 1.11';
+    line('🎨 Графика: '+(GRAPHICS_MODE==='improved'?'Улучшенная':'Классическая'),15);
+    rowBtn(b,'🎮 Классическая графика',GRAPHICS_MODE==='classic'?'выбрана':'без изменений','Включить',()=>{applyGraphicsMode('classic',true);renderPhone();});
+    rowBtn(b,'✨ Улучшенная графика','выше детализация и дальность','Включить',()=>{applyGraphicsMode('improved',true);renderPhone();});
+    line('Улучшенный режим использует более высокое разрешение рендера, тональную коррекцию и увеличенную дальность. На слабых устройствах может снизиться FPS.',13);
     rowBtn(b,'🚪 Выйти в главное меню',COOP.on?(COOP.host?'прогресс сохранится у тебя':'прогресс сохранится у создателя комнаты'):'игра сохранится','Выйти',()=>exitToMenu());line('💾 Автосохранение: каждые 20 секунд и при сворачивании. Сохраняется всё: деньги, транспорт, позиции, трюки, бизнес, сюжет, вещи, мир.',15);
     if(S.savedAt)line('Последнее сохранение: '+new Date(S.savedAt).toLocaleTimeString('ru-RU'),15);
     rowBtn(b,'💾 Сохранить сейчас (слот '+SAVE_SLOT+')','','Сохранить',()=>{fullSave(true);renderPhone();});slotsPanel(b);
@@ -4816,7 +4808,7 @@ function carDamage(v,amt,src){if(v.dead||amt<=0)return;v.dmg=Math.min(100,(v.dmg
     sc.scale.set(.03,rnd(.05,.18),rnd(.3,.9));sc.position.set(s*rnd(.86,1.02),rnd(.45,.9),rnd(-1.6,1.6));v.dec.add(sc);}
   if(v.dmg>40){const parts=v.orig.filter(x=>x.o.parent!==v.dec);for(let k=0;k<2;k++){const x=pick(parts);if(!x)break;x.o.rotation.z=x.r.z+rnd(-.12,.12);x.o.rotation.x=x.r.x+rnd(-.08,.08);x.o.position.y=x.p.y-rnd(0,.06);}}
   if(v.dmg>=100)explodeCar(v,src);}
-function repairCar(v){if(v.orig)v.orig.forEach(x=>{x.o.position.copy(x.p);x.o.rotation.copy(x.r);x.o.material=x.m;});if(v.dec){v.g.remove(v.dec);v.dec=null;}v.decN=0;v.orig=null;v.dmg=0;v.dead=false;v.waterTime=0;v.waterSink=0;v.waterDisabled=false;v.waterDrownTimer=0;}
+function repairCar(v){if(v.orig)v.orig.forEach(x=>{x.o.position.copy(x.p);x.o.rotation.copy(x.r);x.o.material=x.m;});if(v.dec){v.g.remove(v.dec);v.dec=null;}v.decN=0;v.orig=null;v.dmg=0;v.dead=false;}
 function explodeCar(v,src){if(v.dead)return;v.dead=true;const p=v.g.position;sfx('bonk');tone(70,1.2,'sawtooth',.25,30);
   for(let i=0;i<14;i++)setTimeout(()=>puffAt(p.x+rnd(-1.5,1.5),p.y+rnd(.5,2.5),p.z+rnd(-1.5,1.5),pick([0xff8a1a,0xffd23f,0x555555,0x333333]),3),i*40);
   if(v.orig)v.orig.forEach(x=>{x.o.material=mat(0x2a2624);});else carParts(v.g).forEach(o=>o.material=mat(0x2a2624));
@@ -5087,8 +5079,8 @@ if(id==='court'){courtShow(false);M5.court=4;}if(id==='drill')M5.drill=2;
   const _rp2=renderPhone;renderPhone=function(){_rp2();if(phoneApp!=='transport')return;const b=$('sheetBody');const mine=VEHS.filter(v=>v.owner===player.id&&!VEH_TYPES[v.type].rental);
     const s=document.createElement('div');s.className='sec';s.textContent='🔧 Ремонт и состояние';b.appendChild(s);
     if(!mine.length){const d=document.createElement('div');d.className='ti';d.style.fontSize='15px';d.textContent='Вызови машину, чтобы видеть её состояние.';b.appendChild(d);}
-    mine.forEach(v=>rowBtn(b,VEH_TYPES[v.type].e+' '+VEH_TYPES[v.type].n+' · '+(v.dead?'💀 сгорела':'состояние '+Math.round(100-(v.dmg||0))+'%'),v.dead?'вызов 10 000 ₽':(v.dmg||0)>0?'5 000 ₽':'',v.dead?'Новая':'Ремонт',()=>{
-      if(v.dead){closeModal();summonVehicle(v.type);return;}if(!(v.dmg>0)){toast('Машина как новая.');return;}if(!spend(5000))return;repairCar(v);toast('🔧 Отремонтировано. Как новенькая.',2000);renderPhone();}));
+    mine.forEach(v=>rowBtn(b,VEH_TYPES[v.type].e+' '+VEH_TYPES[v.type].n+' · '+(v.dead?(v.waterFailed?'🌊 затоплена':'💀 сгорела'):'состояние '+Math.round(100-(v.dmg||0))+'%'),v.dead&&!v.waterFailed?'вызов 10 000 ₽':(v.dmg||0)>0?'5 000 ₽':'',v.dead&&!v.waterFailed?'Новая':'Ремонт',()=>{
+      if(v.dead&&!v.waterFailed){closeModal();summonVehicle(v.type);return;}if(!(v.dmg>0)){toast('Машина как новая.');return;}if(!spend(5000))return;repairCar(v);toast('🔧 Отремонтировано. Как новенькая.',2000);renderPhone();}));
     Object.keys(S.destroyed||{}).forEach(k=>{if(!mine.some(v=>v.type===k))rowBtn(b,VEH_TYPES[k].e+' '+VEH_TYPES[k].n+' · 💀 уничтожена','10 000 ₽','Вызвать',()=>{closeModal();summonVehicle(k);});});};
   $('bFire').addEventListener('pointerdown',e=>{e.preventDefault();firing=true;if(typeof armedDrive==='function'&&armedDrive())vehFire();else shoot();});$('bFire').addEventListener('pointerup',()=>firing=false);$('bFire').addEventListener('pointercancel',()=>firing=false);
   $('bWeap').addEventListener('pointerdown',e=>{e.preventDefault();cycleWeapon();});
@@ -6790,13 +6782,12 @@ bRun.addEventListener('pointerdown',e=>{e.preventDefault();runHeld=true;bRun.cla
 $('bAct').addEventListener('pointerdown',e=>{e.preventDefault();doAct();});
 $('bSkate').addEventListener('pointerdown',e=>{e.preventDefault();skateBtn();});
 $('bJump').addEventListener('pointerdown',e=>{e.preventDefault();doJump();});
-$('bDive').addEventListener('pointerdown',e=>{e.preventDefault();if(player.swimming){player.diving=!player.diving;$('bDive').textContent=player.diving?'⬆️':'🤿';sfx('click');}});
 $('bTrick').addEventListener('pointerdown',e=>{e.preventDefault();openTrickPicker();});
 $('bPhone').onclick=()=>{if(blocked())return;sfx('click');openPhone();};
 $('bPush').addEventListener('pointerdown',e=>{e.preventDefault();pushBtn();});
 addEventListener('keydown',e=>{if(modalKind==='graf')return;keys[e.code]=true;
   if(e.code==='KeyE'||e.code==='Enter'){if(dlg.open&&!$('dChoices').children.length){if(dlg.typing){dlg.typing=false;$('dText').textContent=dlg.full;}else nextLine();}else doAct();}
-  if(e.code==='Space'){e.preventDefault();if(TM.on)tmHit();else if(player.swimming){player.diving=!player.diving;$('bDive').textContent=player.diving?'⬆️':'🤿';}else if(player.skate==='ride')pushBtn();else doJump();}
+  if(e.code==='Space'){e.preventDefault();if(TM.on)tmHit();else if(player.skate==='ride')pushBtn();else doJump();}
   if(e.code==='KeyT')openTrickPicker();
   if(e.code==='KeyP'){if(modalOpen)closeModal();else $('bPhone').onclick();}
   if(e.code==='KeyF')skateBtn();if(e.code==='KeyQ'){if(typeof BOSS!=='undefined'&&BOSS.on&&area==='lab'){}else if(typeof armedDrive==='function'&&armedDrive()){firing=true;vehFire();}else if(typeof weaponReady==='function'&&weaponReady()){firing=true;shoot();}else $('bSwitch').onclick();}
@@ -6852,7 +6843,7 @@ function updPlayer(dt){
     c.moving=false;trickAnim(c,dt);c.skMesh.position.set(c.pos.x,(area==='city'?H(c.pos.x,c.pos.z):0)+(c.hop||0),c.pos.z);c.skMesh.rotation.set(c.flipX||0,c.yaw+(c.flipY||0),c.flipZ||0);
   }else if(!c.sitting&&c.pose!=='fall'){
     const k=slipHere()?1-Math.exp(-1.6*dt):1-Math.exp(-14*dt);
-    if(mag>.1){const n=Math.hypot(mx,mz);mx/=n;mz/=n;const wetMove=area==='city'&&inLake(c.pos.x,c.pos.z);const sp=(wetMove?(c.diving?2.0:2.8):(run&&mag>.4?7.4:4.3))*Math.max(.4,mag);
+    if(mag>.1){const n=Math.hypot(mx,mz);mx/=n;mz/=n;const sp=(run&&mag>.4?7.4:4.3)*Math.max(.4,mag);
       c.vx=lerp(c.vx,mx*sp,k);c.vz=lerp(c.vz,mz*sp,k);c.yaw=angLerp(c.yaw,Math.atan2(mx,mz),1-Math.exp(-dt*12));}
     else{c.vx=lerp(c.vx,0,k);c.vz=lerp(c.vz,0,k);}
     if(run&&mag>.5&&!c.air&&c.feet!==undefined){const sp0=Math.hypot(c.vx,c.vz);if(sp0>5&&lowAhead(c.pos.x+c.vx/sp0*.75,c.pos.z+c.vz/sp0*.75,c.feet)){c.air=true;c.vy=6.4;sfx('jump');}}
@@ -6870,7 +6861,6 @@ function updPlayer(dt){
     else if(gr<c.feet-.3&&c.pose!=='ride'){c.air=true;c.vy=0;}
     else if(c.pose==='ride'&&gr<c.feet-.22&&Math.abs(c.v)>4){c.air=true;c.vy=Math.max(0,c.rvy||0)*.9;}
     else{c.rvy=(gr-c.feet)/Math.max(dt,.001);c.feet=gr;}}
-  if(area==='city'&&inLake(c.pos.x,c.pos.z)){c.swimming=true;c.air=false;c.vy=0;c.feet=LAKE_WATER_Y-(c.diving?2.0:.55);c.pose='walk';}else{c.swimming=false;c.diving=false;}
   c.pos.y=c.feet;
   c.g.position.set(c.pos.x,c.pos.y+(c.gy||0)+(c.pose==='ride'?.13+(c.hop||0):0),c.pos.z);c.g.rotation.y=c.yaw+(c.spinY||0);
   poseActor(c,dt);
@@ -6949,12 +6939,11 @@ let curI=null,objT=0;
 const marker=emojiSprite('🔻',1.3);scene.add(marker);
 function updateWho(){$('who').textContent=(player===marya?'👩 ':'🪿 ')+player.name;}
 function updHUD(dt,time){
-  $('bDive').classList.toggle('hidden',!player.swimming||!!player.drive);
   curI=blocked()||player.drive||player.fly?null:nearestI();
   const al=$('actLabel');if(curI){al.textContent=L(curI);al.classList.remove('hidden');$('bAct').classList.remove('dim');}else{al.classList.add('hidden');$('bAct').classList.add('dim');}
   const isG=player===gus;
   $('bSkate').classList.toggle('hidden',!(player.skate==='hand'||player.skate==='ride'));$('bSkate').textContent=player.skate==='ride'?'🚶':'🛹';
-  $('bPush').classList.toggle('hidden',player.skate!=='ride');$('bJump').classList.toggle('hidden',player.skate==='ride'||player.swimming);$('bTrick').classList.toggle('hidden',!(player.skate==='ride'&&Math.abs(player.v)>2.5&&!TM.on));$('bRun').classList.toggle('hidden',player.skate==='ride');
+  $('bPush').classList.toggle('hidden',player.skate!=='ride');$('bJump').classList.toggle('hidden',player.skate==='ride');$('bTrick').classList.toggle('hidden',!(player.skate==='ride'&&Math.abs(player.v)>2.5&&!TM.on));$('bRun').classList.toggle('hidden',player.skate==='ride');
   const sh=$('skateHud');if(player.skate==='ride'){sh.classList.remove('hidden');sh.textContent=`💨 ${Math.round(Math.abs(player.v)*3.6)} км/ч`+(player.fails?'  ⚠️'.repeat(player.fails):'');}else sh.classList.add('hidden');
   const sw=$('bSwitch'),ok=canSwitch();sw.classList.toggle('off',!ok);sw.classList.toggle('on',ok);
   document.body.classList.toggle('busy',blocked());
@@ -6997,6 +6986,63 @@ function updFactory(dt,time){if(area!=='factory')return;
   beltItems.forEach((m,i)=>{m.position.x+=dt*1.2;if(m.position.x>FX+12)m.position.x=FX-12;});
   if(cardMesh&&cardMesh.userData.sp)cardMesh.userData.sp.position.y=1.6+Math.sin(time*3)*.1;}
 
+
+/* ================= МГИАГ 1.11 — lake gameplay ================= */
+const MGIAG_LAKE={x:-392,z:-20,rx:26,rz:48};
+const MGIAG_WATER_STATE={diving:false,inside:false};
+function mgiagInLake(x,z){
+  const dx=(x-MGIAG_LAKE.x)/MGIAG_LAKE.rx,dz=(z-MGIAG_LAKE.z)/MGIAG_LAKE.rz;
+  return dx*dx+dz*dz<.91;
+}
+function mgiagWaterY(){return H(MGIAG_LAKE.x,MGIAG_LAKE.z)+.18;}
+function mgiagBuildWaterControl(){
+  if(document.getElementById('mgiagDiveBtn'))return;
+  const b=document.createElement('button');b.id='mgiagDiveBtn';b.type='button';
+  b.textContent='🌊 Нырнуть';
+  b.style.cssText='display:none;position:fixed;right:22px;bottom:116px;z-index:1200;border:2px solid #b9edff;border-radius:16px;padding:13px 17px;background:#126b91ee;color:white;font:800 16px Rubik,Arial;box-shadow:0 5px 18px #0018;touch-action:manipulation';
+  b.addEventListener('click',()=>{MGIAG_WATER_STATE.diving=!MGIAG_WATER_STATE.diving;b.textContent=MGIAG_WATER_STATE.diving?'⬆️ На поверхность':'🌊 Нырнуть';});
+  document.body.appendChild(b);
+}
+function mgiagUpdateWaterPlayer(){
+  if(area!=='city'||!player||player.drive){MGIAG_WATER_STATE.inside=false;const b=document.getElementById('mgiagDiveBtn');if(b)b.style.display='none';return;}
+  const inside=mgiagInLake(player.pos.x,player.pos.z);
+  const b=document.getElementById('mgiagDiveBtn');
+  if(b)b.style.display=inside?'block':'none';
+  if(!inside){MGIAG_WATER_STATE.inside=false;MGIAG_WATER_STATE.diving=false;if(b)b.textContent='🌊 Нырнуть';return;}
+  MGIAG_WATER_STATE.inside=true;
+  const surface=mgiagWaterY();
+  const targetY=surface-(MGIAG_WATER_STATE.diving?1.22:.42);
+  player.g.position.y=targetY+(player.gy||0)+(player.pose==='ride'?.13:0);
+  player.g.position.x=player.pos.x;player.g.position.z=player.pos.z;
+  player.g.rotation.y=player.yaw;
+  player.vx*=.91;player.vz*=.91;
+  if(player.skate==='ride'&&!player.fly)player.v*=.88;
+}
+const _mgiagUpdPlayer=updPlayer;
+updPlayer=function(dt){_mgiagUpdPlayer(dt);mgiagUpdateWaterPlayer();};
+
+function mgiagUpdateWetVehicles(dt){
+  if(area!=='city')return;
+  for(const v of VEHS){
+    if(v.fly)continue;
+    const inside=mgiagInLake(v.pos.x,v.pos.z);
+    if(!inside){if(v.wetTimer>0&&!v.dead){v.wetTimer=0;v.mgiagWarned=false;}continue;}
+    v.wetTimer=(v.wetTimer||0)+dt;
+    const t=v.wetTimer,sink=Math.max(0,Math.min(1,(t-21)/10)),surface=mgiagWaterY();
+    v.pos.y=surface-.22-sink*1.65;v.g.position.y=v.pos.y;
+    if(t>21&&t<30&&Math.random()<dt*2.5)puffAt(v.pos.x+rnd(-.7,.7),surface+.25,v.pos.z+rnd(-.7,.7),0x7d8790,1);
+    if(t>=30&&!v.dead){
+      v.dead=true;v.waterFailed=true;v.v=0;v.dmg=Math.max(v.dmg||0,75);
+      toast('🚗 Машина заглохла и тонет. Выйди и выберись на берег!',3200);sfx('bonk');
+    }
+    if(t>=30&&Math.random()<dt*1.6)puffAt(v.pos.x+rnd(-.8,.8),surface+.2,v.pos.z+rnd(-.8,.8),0x59636c,1);
+    if(v===player.drive&&t>36&&!v.mgiagWarned){v.mgiagWarned=true;toast('⚠️ Машина почти ушла под воду!',2600);}
+  }
+}
+const _mgiagRepairCar=repairCar;
+repairCar=function(v){_mgiagRepairCar(v);if(v){v.wetTimer=0;v.mgiagWarned=false;v.waterFailed=false;}};
+mgiagBuildWaterControl();
+
 /* ================= main loop ================= */
 let started=false,last=performance.now(),time=0,titleAng=0;
 function loop(now){requestAnimationFrame(loop);let dt=Math.min(.05,(now-last)/1000);last=now;if(typeof RCV!=='undefined'&&RCV.slow)dt*=RCV.slow;time+=dt;
@@ -7006,7 +7052,7 @@ function loop(now){requestAnimationFrame(loop);let dt=Math.min(.05,(now-last)/10
     tickDialog(dt);tickTiming(dt);
     if(area==='city'&&comp.ai==='snow'&&SQ.active)updSnowHelper(dt);
     if(SQ.active&&SQ.phase!==1.5&&!blocked())SQ.t+=dt;
-    updPlayer(dt);updComp(dt);
+    updPlayer(dt);mgiagUpdateWetVehicles(dt);updComp(dt);
     for(const a of [narmina,maksim,...DX.workers,...extraActors()])if(!a.hidden&&area==='city')updActor(a,dt);
     if(area==='shop')updActor(shopkeeper,dt);
     if(area==='mall')updMall(dt);updAlways13(dt,time);upd2always(dt,time);upd3always(dt,time);upd4always(dt,time);upd5always(dt,time);upd8always(dt,time);upd9always(dt,time);upd10always(dt,time);upd11(dt,time);coopSend(dt);
@@ -7028,7 +7074,6 @@ async function init(){
   placeA(narmina,-47,-16,Math.PI*.8);narmina.ai='idle';
   maksim.hidden=true;maksim.g.visible=false;
   worldReady=true;
-  applyGraphicsMode(GRAPHICS_MODE);
   setupTitle();
 }
 function applySave(){
