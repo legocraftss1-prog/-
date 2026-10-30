@@ -1,5 +1,5 @@
 /* МГИАГ — офлайн-кэш. При обновлении игры поменяй VERSION, чтобы телефоны скачали новую версию. */
-const VERSION='mgiag-1.11';
+const VERSION='mgiag-1.11.1';
 const CORE=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png','./icon-maskable-512.png'];
 const CDN=['https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(VERSION).then(async c=>{await c.addAll(CORE);for(const u of CDN){try{await c.add(new Request(u,{mode:'cors'}));}catch(_){}}}).then(()=>self.skipWaiting()));});
