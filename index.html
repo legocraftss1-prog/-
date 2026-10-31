@@ -350,7 +350,7 @@ const pLight=new THREE.PointLight(0xffe2b0,0,16,1.4);scene.add(pLight);
 const fLights=[];for(let i=0;i<4;i++){const l=new THREE.PointLight(0xffffff,0,30,1.1);scene.add(l);fLights.push(l);}
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
-applyGraphicsMode(GRAPHICS_MODE,false);
+applyGraphicsMode(GRAPHICS_MODE,false)
 
 const cityG=new THREE.Group(),factG=new THREE.Group(),shopG=new THREE.Group();
 scene.add(cityG,factG,shopG);factG.visible=false;shopG.visible=false;
@@ -1445,7 +1445,7 @@ function buildFactory(){BA='factory';
   fbox(1.2,2.2,.1,0x7a4a2a,0,0,KZ+2.9,{col:false,cam:false});
   /* strange man */
   man=makeMan();man.visible=false;factG.add(man);
-  mergeStatic(factG);
+  (factG);
 }
 const MAN_SPOTS=[[-27,14],[29,40],[-26,1],[27,-2],[-27,-27],[-9,-14],[28,-10],[19,-28],[13,-147],[-13,-121],[0,-187],[1,-172]].map(([x,z])=>({x:FX+x,z:FZ+z}));
 const MAN={vis:false,seen:false,cd:9,away:0,first:false};
@@ -7097,6 +7097,86 @@ function start(sv){
   else toast('С возвращением. Город ничего не забыл.');
 }
 requestAnimationFrame(loop);init();
+/* ===== MGIAG 1.11.3 GRAPHICS UPGRADE ===== */
+
+(function () {
+
+  const originalApplyGraphicsMode = applyGraphicsMode;
+
+  function updateShadows(improved) {
+    renderer.shadowMap.enabled = improved;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.autoUpdate = true;
+
+    sun.castShadow = improved;
+
+    if (improved) {
+      sun.shadow.mapSize.set(1024, 1024);
+
+      Object.assign(sun.shadow.camera, {
+        left: -100,
+        right: 100,
+        top: 100,
+        bottom: -100,
+        near: 1,
+        far: 250
+      });
+
+      sun.shadow.bias = -0.0002;
+      sun.shadow.normalBias = 0.02;
+      sun.shadow.radius = 3;
+      sun.shadow.camera.updateProjectionMatrix();
+      sun.shadow.needsUpdate = true;
+    }
+
+    scene.traverse(object => {
+      if (!object.isMesh) return;
+
+      object.castShadow = improved;
+      object.receiveShadow = improved;
+    });
+  }
+
+  applyGraphicsMode = function (mode, notify) {
+    originalApplyGraphicsMode(mode, notify);
+
+    const improved = GRAPHICS_MODE === 'improved';
+
+    updateShadows(improved);
+
+    // Более заметная разница между режимами
+    if (improved) {
+      sun.intensity = 1.5;
+      hemi.intensity = 1.4;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      fog.far = 260;
+    } else {
+      sun.intensity = 0.75;
+      hemi.intensity = 0.95;
+      fog.far = 175;
+    }
+
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio || 1, improved ? 2 : 1.6)
+    );
+
+    resize();
+  };
+
+  function waitForWorld() {
+    if (!worldReady) {
+      requestAnimationFrame(waitForWorld);
+      return;
+    }
+
+    applyGraphicsMode(GRAPHICS_MODE, false);
+  }
+
+  waitForWorld();
+
+  console.log('MGIAG 1.11.3 Graphics Upgrade loaded');
+
+})();
 </script>
 </body>
 </html>
