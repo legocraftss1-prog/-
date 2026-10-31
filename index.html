@@ -7110,51 +7110,45 @@ requestAnimationFrame(loop);init();
 
     sun.castShadow = improved;
 
-    if (improved) {
-      sun.shadow.mapSize.set(1024, 1024);
+if (improved) {
+  // Улучшенная графика: меньше света, больше контраста
+  sun.intensity = 0.65;
+  hemi.intensity = 0.55;
 
-      Object.assign(sun.shadow.camera, {
-        left: -100,
-        right: 100,
-        top: 100,
-        bottom: -100,
-        near: 1,
-        far: 250
-      });
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.9;
 
-      sun.shadow.bias = -0.0002;
-      sun.shadow.normalBias = 0.02;
-      sun.shadow.radius = 3;
-      sun.shadow.camera.updateProjectionMatrix();
-      sun.shadow.needsUpdate = true;
-    }
+  fog.far = 220;
+} else {
+  // Классическая графика
+  sun.intensity = 0.55;
+  hemi.intensity = 0.65;
 
-    scene.traverse(object => {
-      if (!object.isMesh) return;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.toneMappingExposure = 1;
 
-      object.castShadow = improved;
-      object.receiveShadow = improved;
-    });
-  }
-
-  applyGraphicsMode = function (mode, notify) {
-    originalApplyGraphicsMode(mode, notify);
-
-    const improved = GRAPHICS_MODE === 'improved';
-
-    updateShadows(improved);
-
+  fog.far = 175;
+}
     // Более заметная разница между режимами
     if (improved) {
-      sun.intensity = 1.5;
-      hemi.intensity = 1.4;
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      fog.far = 260;
-    } else {
-      sun.intensity = 0.75;
-      hemi.intensity = 0.95;
-      fog.far = 175;
-    }
+  // Улучшенная графика: меньше света, больше контраста
+  sun.intensity = 0.65;
+  hemi.intensity = 0.55;
+
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.9;
+
+  fog.far = 220;
+} else {
+  // Классическая графика
+  sun.intensity = 0.55;
+  hemi.intensity = 0.65;
+
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.toneMappingExposure = 1;
+
+  fog.far = 175;
+}
 
     renderer.setPixelRatio(
       Math.min(window.devicePixelRatio || 1, improved ? 2 : 1.6)
@@ -7173,8 +7167,6 @@ requestAnimationFrame(loop);init();
   }
 
   waitForWorld();
-
-  alert('ТЕСТ 111 - НОВЫЙ КОД ЗАПУЩЕН!')
 
 })();
 </script>
