@@ -11,9 +11,11 @@
 (function () {
   'use strict';
   var KEY = 'mg_gfx';
-  var GFX = { mode: 'classic', tier: 0, auto: true, applied: false };
+  var GFX = { mode: 'classic', tier: 0, auto: true, applied: false, opt: { detail: true, light: true, dist: 1.3, cam: 1 } };
   try { GFX.mode = localStorage.getItem(KEY) === 'hd' ? 'hd' : 'classic'; } catch (e) { }
   try { GFX.auto = localStorage.getItem('mg_gfx_auto') !== '0'; } catch (e) { }
+  try { var so = JSON.parse(localStorage.getItem('mg_gfx_opt') || 'null'); if (so) { GFX.opt.detail = so.detail !== false; GFX.opt.light = so.light !== false; GFX.opt.dist = Math.min(1.8, Math.max(.7, +so.dist || 1.3)); GFX.opt.cam = Math.min(2, Math.max(.7, +so.cam || 1)); } } catch (e) { }
+  function saveOpt() { try { localStorage.setItem('mg_gfx_opt', JSON.stringify(GFX.opt)); } catch (e) { } }
   window.MG_GFX = GFX;
 
   var MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (window.matchMedia && matchMedia('(pointer:coarse)').matches);
@@ -78,12 +80,14 @@
   function flagShadow(o) {
     var m = o.material; if (!m) return;
     var arr = Array.isArray(m) ? m : [m];
-    var lit = arr.some(function (x) { return x.isMeshLambertMaterial || x.isMeshPhongMaterial; });
-    var big = false;
-    if (o.geometry) { if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); big = o.geometry.boundingSphere && o.geometry.boundingSphere.radius > 78 && !o.userData.merged; }
-    o.receiveShadow = lit;
-    o.castShadow = lit && !arr.some(function (x) { return x.transparent; }) && !big && !o.userData.noShadow;
-    arr.forEach(patchMat);
+    if (GFX.opt.light) {
+      var lit = arr.some(function (x) { return x.isMeshLambertMaterial || x.isMeshPhongMaterial; });
+      var big = false;
+      if (o.geometry) { if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); big = o.geometry.boundingSphere && o.geometry.boundingSphere.radius > 78 && !o.userData.merged; }
+      o.receiveShadow = lit;
+      o.castShadow = lit && !arr.some(function (x) { return x.transparent; }) && !big && !o.userData.noShadow;
+    } else { o.castShadow = false; o.receiveShadow = false; }
+    arr.forEach(GFX.opt.detail ? patchMat : unpatchMat);
   }
   function processQueue(budget) {
     var n = 0;
@@ -153,18 +157,20 @@
   /* ---------- применение режимов ---------- */
   var sunTargetAdded = false;
   function tierParams() {
-    var t = GFX.tier;
+    var t = GFX.tier, d = GFX.opt.dist, L = GFX.opt.light;
+    if (t >= 2) d = Math.min(d, 1);
     return {
-      shadows: t < 2,
+      shadows: L && t < 2,
       sm: MOBILE ? (t === 0 ? 1024 : 512) : (t === 0 ? 2048 : 1024),
       half: MOBILE ? 42 : 70,
       pr: Math.min(window.devicePixelRatio || 1, MOBILE ? (t >= 1 ? 1.2 : 1.6) : (t >= 2 ? 1.25 : 2)),
-      cull: t >= 2 ? 360 : (MOBILE ? 480 : 600),
-      far: t >= 2 ? 620 : (MOBILE ? 760 : 900),
-      fogMul: t >= 2 ? 1 : (MOBILE ? 1.25 : 1.4),
-      dust: t < 2
+      cull: Math.min(760, Math.round(420 * d)),
+      far: Math.min(1100, Math.round(620 * d)),
+      fogMul: d,
+      dust: GFX.opt.detail && t < 2
     };
   }
+  function touchMats() { scene.traverse(function (o) { if (o.isMesh) { var a = Array.isArray(o.material) ? o.material : [o.material]; a.forEach(function (m) { if (m) m.needsUpdate = true; }); } }); }
   function applyTier() {
     var P = tierParams();
     renderer.setPixelRatio(P.pr); renderer.setSize(innerWidth, innerHeight, false);
@@ -175,29 +181,46 @@
       var c = s.camera; c.left = -P.half; c.right = P.half; c.top = P.half; c.bottom = -P.half; c.near = 1; c.far = 320; c.updateProjectionMatrix();
       s.bias = -0.0009; s.normalBias = 0.06;
     }
-    if (wasShadow !== P.shadows) scene.traverse(function (o) { if (o.isMesh) { var a = Array.isArray(o.material) ? o.material : [o.material]; a.forEach(function (m) { if (m) m.needsUpdate = true; }); } });
+    if (wasShadow !== P.shadows) touchMats();
     window.MG_CULL = P.cull; camera.far = P.far; camera.updateProjectionMatrix();
+    GFX.fogMul = P.fogMul;
     if (dust) dust.visible = P.dust;
   }
   GFX.fogMul = 1;
-  function applyHD() {
+  // Полностью пересобирает текущее состояние по режиму и двум переключателям (идемпотентно)
+  function sync() {
+    if (GFX.mode !== 'hd') return applyClassic();
     saveOrig();
+    var O = GFX.opt;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12;
+    // «Улучшение света»: кинематографичная тонировка + тени от солнца
+    renderer.toneMapping = O.light ? THREE.ACESFilmicToneMapping : ORIG.tone;
+    renderer.toneMappingExposure = O.light ? 1.12 : ORIG.exp;
     if (!sunTargetAdded) { scene.add(sun.target); sunTargetAdded = true; }
-    GFX.tier = Math.max(GFX.tier, 0); applyTier(); GFX.fogMul = tierParams().fogMul;
-    rescan();
-    swapWater(true);
-    if (!dust) { dust = makeDust(); scene.add(dust); }
-    dust.visible = tierParams().dust;
-    // более густые частицы: дым, пыль, искры
-    if (typeof puffAt === 'function' && !origPuff) { origPuff = puffAt; window.puffAt = puffAt = function (x, y, z, c, n) { return origPuff(x, y, z, c, Math.max(1, Math.round((n || 1) * (MOBILE ? 1.3 : 1.8)))); }; }
-    document.body.classList.add('mg-hd');
+    if (!O.light) { sun.target.position.set(0, 0, 0); sun.target.updateMatrixWorld(); }
+    applyTier();
+    // «Улучшение графики»: детали материалов, шейдерная вода, частицы, стеклянный интерфейс
+    swapWater(O.detail);
+    if (O.detail && !dust) { dust = makeDust(); scene.add(dust); }
+    if (dust) dust.visible = tierParams().dust;
+    if (O.detail) {
+      if (typeof puffAt === 'function' && !origPuff) { origPuff = puffAt; window.puffAt = puffAt = function (x, y, z, c, n) { return origPuff(x, y, z, c, Math.max(1, Math.round((n || 1) * (MOBILE ? 1.3 : 1.8)))); }; }
+      document.body.classList.add('mg-hd');
+    } else {
+      if (origPuff) { window.puffAt = puffAt = origPuff; origPuff = null; }
+      document.body.classList.remove('mg-hd');
+    }
+    // «Отдаление камеры»
+    window.MG_CAMUSER = O.cam;
+    // сбросить пометки на объектах и расставить заново (порциями)
+    scene.traverse(function (o) { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+    rescan(); processQueue(MOBILE ? 800 : 2500);
+    touchMats();
     GFX.applied = true;
-    // принудительно пересобрать все материалы: тон-маппинг и тени требуют перекомпиляции
-    scene.traverse(function (o) { if (o.isMesh) { var a = Array.isArray(o.material) ? o.material : [o.material]; a.forEach(function (m) { if (m) m.needsUpdate = true; }); } });
   }
+  function applyHD() { sync(); }
   function applyClassic() {
+    window.MG_CAMUSER = 1;
     if (!ORIG) { document.body.classList.remove('mg-hd'); GFX.applied = false; return; }
     renderer.toneMapping = ORIG.tone; renderer.toneMappingExposure = ORIG.exp;
     renderer.shadowMap.enabled = ORIG.shadow; sun.castShadow = false;
@@ -209,14 +232,26 @@
     if (origPuff) { window.puffAt = puffAt = origPuff; origPuff = null; }
     GFX.fogMul = 1;
     document.body.classList.remove('mg-hd');
-    scene.traverse(function (o) { if (o.isMesh) { var a = Array.isArray(o.material) ? o.material : [o.material]; a.forEach(function (m) { if (m) m.needsUpdate = true; }); } });
+    touchMats();
     GFX.applied = false;
   }
   GFX.set = function (mode) {
     GFX.mode = mode === 'hd' ? 'hd' : 'classic';
     try { localStorage.setItem(KEY, GFX.mode); } catch (e) { }
     if (!ready()) return;
-    try { if (GFX.mode === 'hd') applyHD(); else applyClassic(); } catch (e) { console.error('[MG_GFX]', e); }
+    try { sync(); } catch (e) { console.error('[MG_GFX]', e); }
+  };
+  // Изменение переключателей/ползунков: key = 'detail'|'light'|'dist'|'cam'
+  GFX.setOpt = function (key, val, live) {
+    if (key === 'dist') val = Math.min(1.8, Math.max(.7, +val)); if (key === 'cam') val = Math.min(2, Math.max(.7, +val));
+    if (key === 'detail' || key === 'light') val = !!val;
+    GFX.opt[key] = val; saveOpt();
+    if (!ready() || GFX.mode !== 'hd') return;
+    try {
+      if (key === 'cam') window.MG_CAMUSER = val;
+      else if (key === 'dist') { var P = tierParams(); window.MG_CULL = P.cull; camera.far = P.far; camera.updateProjectionMatrix(); GFX.fogMul = P.fogMul; }
+      else if (!live) sync();
+    } catch (e) { console.error('[MG_GFX]', e); }
   };
   GFX.setAuto = function (on) { GFX.auto = !!on; try { localStorage.setItem('mg_gfx_auto', on ? '1' : '0'); } catch (e) { } };
 
@@ -229,7 +264,7 @@
     if (ft < 250) fpsEma += (ft - fpsEma) * .05;
     if (GFX.auto && typeof started !== 'undefined' && started) {
       if (fpsEma > 27) { slowFor += dt; fastFor = 0; } else if (fpsEma < 19) { fastFor += dt; slowFor = 0; } else { slowFor = 0; fastFor = 0; }
-      if (slowFor > 3 && GFX.tier < 3) { GFX.tier++; slowFor = 0; applyTier(); GFX.fogMul = tierParams().fogMul; if (typeof toast === 'function') toast('⚙️ Улучшенная графика: качество снижено для плавности'); }
+      if (slowFor > 3 && GFX.tier < 3) { GFX.tier++; slowFor = 0; applyTier(); if (typeof toast === 'function') toast('⚙️ Улучшенная графика: качество снижено для плавности'); }
     }
     // тени следуют за игроком
     if (renderer.shadowMap.enabled && typeof player !== 'undefined' && player) {
@@ -250,7 +285,7 @@
     if (typeof sun !== 'undefined') { waterUniforms.uSun.value.copy(sun.position).sub(sun.target.position).normalize(); }
     if (typeof scene !== 'undefined' && scene.background) waterUniforms.uSky.value.copy(scene.background);
     // дальность тумана
-    if (typeof fog !== 'undefined' && GFX.fogMul !== 1) { fog.far *= GFX.fogMul; fog.near *= (1 + (GFX.fogMul - 1) * .6); }
+    if (typeof fog !== 'undefined' && GFX.fogMul !== 1) { fog.far *= GFX.fogMul; if (GFX.fogMul > 1) fog.near *= (1 + (GFX.fogMul - 1) * .6); }
     scanT -= dt; if (scanT <= 0) { scanT = 4; rescan(); }
     processQueue(MOBILE ? 500 : 1200);
   }
@@ -263,7 +298,7 @@
       var wrapped = function (dt, t) { orig(dt, t); try { frame(dt); } catch (e) { console.error('[MG_GFX frame]', e); GFX.mode = 'classic'; try { applyClassic(); } catch (e2) { } } };
       wrapped.__mgGfx = true; window.updEnv = updEnv = wrapped;
     }
-    if (GFX.mode === 'hd' && !GFX.applied) { try { applyHD(); } catch (e) { console.error('[MG_GFX]', e); } }
+    if (GFX.mode === 'hd' && !GFX.applied) { try { sync(); } catch (e) { console.error('[MG_GFX]', e); } }
     return true;
   }
   var tries = setInterval(function () { if (hook()) clearInterval(tries); }, 150);
@@ -302,9 +337,29 @@
           return x;
         }
         row.appendChild(btn('🎞️ Классическая', 'Как раньше. Быстро на любых устройствах.', 'classic'));
-        row.appendChild(btn('✨ Улучшенная', 'Тени, вода, детали, дальность. Нужен телефон помощнее.', 'hd'));
+        row.appendChild(btn('✨ Улучшенная', 'Больше деталей и света. Нужен телефон помощнее.', 'hd'));
         box.appendChild(row);
         if (GFX.mode === 'hd') {
+          function tog(label, sub, key) {
+            var x = document.createElement('button'); x.className = 'pbtn' + (GFX.opt[key] ? ' main' : ''); x.style.cssText = 'margin-top:8px;width:100%;text-align:left;padding:10px 12px';
+            x.innerHTML = (GFX.opt[key] ? '✅ ' : '⬜ ') + '<b>' + label + '</b><br><small style="opacity:.8">' + sub + '</small>';
+            x.onclick = function () { GFX.setOpt(key, !GFX.opt[key]); renderPhone(); }; return x;
+          }
+          box.appendChild(tog('Улучшение графики', 'Детальные материалы, вода с отражением неба, больше частиц, стеклянный интерфейс.', 'detail'));
+          box.appendChild(tog('Улучшение света', 'Тени от солнца, мягкая кинематографичная тонировка. Заметно нагружает телефон.', 'light'));
+          function slider(label, key, min, max, step, fmt) {
+            var w = document.createElement('div'); w.style.cssText = 'margin-top:12px';
+            var l = document.createElement('div'); l.style.cssText = 'display:flex;justify-content:space-between;font-weight:800;font-size:14px';
+            var nm = document.createElement('span'); nm.textContent = label; var val = document.createElement('span'); val.textContent = fmt(GFX.opt[key]); l.appendChild(nm); l.appendChild(val);
+            var r = document.createElement('input'); r.type = 'range'; r.min = min; r.max = max; r.step = step; r.value = GFX.opt[key]; r.style.cssText = 'width:100%;margin-top:4px';
+            r.oninput = function () { val.textContent = fmt(+r.value); GFX.setOpt(key, +r.value, true); };
+            r.onchange = function () { GFX.setOpt(key, +r.value); };
+            ['pointerdown', 'touchstart', 'mousedown'].forEach(function (ev) { r.addEventListener(ev, function (e) { e.stopPropagation(); }, { passive: true }); });
+            w.appendChild(l); w.appendChild(r); return w;
+          }
+          box.appendChild(slider('🔭 Дальность прорисовки', 'dist', .7, 1.8, .05, function (v) { return Math.round(v * 100) + '%'; }));
+          box.appendChild(slider('📷 Отдаление камеры', 'cam', .7, 2, .05, function (v) { return Math.round(v * 100) + '%'; }));
+          var hint = document.createElement('div'); hint.style.cssText = 'opacity:.7;font-size:12px;margin-top:6px'; hint.textContent = '100% — как в классике. Большая дальность прорисовки нагружает слабые телефоны.'; box.appendChild(hint);
           var au = document.createElement('button'); au.className = 'pbtn'; au.style.cssText = 'margin-top:8px;width:100%;text-align:left;padding:8px 12px';
           au.textContent = (GFX.auto ? '✅' : '⬜') + ' Авто-снижение качества, если лагает' + (GFX.tier ? ' (сейчас уровень ' + GFX.tier + ')' : '');
           au.onclick = function () { GFX.setAuto(!GFX.auto); if (GFX.auto) { GFX.tier = 0; applyTier(); } renderPhone(); };

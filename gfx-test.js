@@ -18,6 +18,26 @@ let pass=0,fail=0;const ok=(c,n,x)=>{c?pass++:fail++;console.log(c?'  ✔':'  �
  await pg.evaluate(()=>localStorage.setItem('mg_gfx','hd'));await pg.reload();await pg.waitForTimeout(700);
  ok(await pg.evaluate(()=>renderer.toneMapping===4&&MG_GFX.applied),'сохранённый «hd» применяется сам при запуске');
  await pg.evaluate(()=>{renderPhone();});
+
+ console.log('--- переключатели и ползунки');
+ const o1=await pg.evaluate(()=>{MG_GFX.set('hd');MG_GFX.setOpt('light',false);return {tone:renderer.toneMapping,sh:renderer.shadowMap.enabled,cast:meshes.filter(m=>m.castShadow).length,patched:meshes.filter(m=>m.material.userData.mgHD).length,body:document.body.classList.contains('mg-hd')};});
+ ok(o1.tone===0&&!o1.sh&&o1.cast===0&&o1.patched>0&&o1.body,'«Улучшение света» выкл: нет теней и тонировки, но детали графики остались',o1);
+ const o2=await pg.evaluate(()=>{MG_GFX.setOpt('light',true);MG_GFX.setOpt('detail',false);return {tone:renderer.toneMapping,sh:renderer.shadowMap.enabled,cast:meshes.filter(m=>m.castShadow).length,patched:meshes.filter(m=>m.material.userData.mgHD).length,body:document.body.classList.contains('mg-hd')};});
+ ok(o2.tone===4&&o2.sh&&o2.cast>0&&o2.patched===0&&!o2.body,'«Улучшение графики» выкл: свет и тени остались, детали убраны',o2);
+ const o3=await pg.evaluate(()=>{MG_GFX.setOpt('detail',false);MG_GFX.setOpt('light',false);return {tone:renderer.toneMapping,sh:renderer.shadowMap.enabled,cast:meshes.filter(m=>m.castShadow).length,patched:meshes.filter(m=>m.material.userData.mgHD).length};});
+ ok(o3.tone===0&&!o3.sh&&o3.cast===0&&o3.patched===0,'оба выключены: картинка как в классике',o3);
+ const o4=await pg.evaluate(()=>{MG_GFX.setOpt('detail',true);MG_GFX.setOpt('light',true);MG_GFX.setOpt('dist',.8,true);const a={far:camera.far,cull:window.MG_CULL,fm:MG_GFX.fogMul};MG_GFX.setOpt('dist',1.6,true);const b={far:camera.far,cull:window.MG_CULL,fm:MG_GFX.fogMul};return {a,b};});
+ ok(o4.a.far<620&&o4.a.cull<420&&o4.a.fm<1&&o4.b.far>900&&o4.b.cull>600&&o4.b.fm>1.5,'ползунок дальности: 80% ближе классики, 160% дальше',o4);
+ const o5=await pg.evaluate(()=>{MG_GFX.setOpt('cam',1.5,true);const a=window.MG_CAMUSER;MG_GFX.set('classic');return {a,after:window.MG_CAMUSER};});
+ ok(o5.a===1.5&&o5.after===1,'ползунок камеры работает; в классике множитель сбрасывается в 1',o5);
+ const o6=await pg.evaluate(()=>JSON.parse(localStorage.getItem('mg_gfx_opt')));
+ ok(o6&&o6.cam===1.5&&o6.dist===1.6,'значения ползунков сохраняются',o6);
+ await pg.reload();await pg.evaluate(()=>localStorage.setItem('mg_gfx','hd'));await pg.reload();await pg.waitForTimeout(700);
+ const o7=await pg.evaluate(()=>({cam:window.MG_CAMUSER,far:camera.far,o:MG_GFX.opt}));
+ ok(o7.cam===1.5&&o7.far>900,'после перезапуска настройки применяются сами',o7);
+ await pg.evaluate(()=>{phoneApp='settings';document.getElementById('sheetBody').innerHTML='<h2>Настройки</h2>';window.renderPhone=(function(f){return f;})(renderPhone);renderPhone();});
+ const ui=await pg.evaluate(()=>({sliders:document.querySelectorAll('[data-mg-gfx] input[type=range]').length,btns:document.querySelectorAll('[data-mg-gfx] button').length}));
+ ok(ui.sliders===2&&ui.btns>=5,'в настройках: 2 переключателя режима + 2 переключателя улучшений + 2 ползунка',ui);
  const e=errs.filter(x=>!/favicon/.test(x));ok(e.length===0,'ошибок в консоли нет',e.slice(0,3));
  console.log('\n══ графика: '+pass+' ок, '+fail+' провалов ══');await br.close();process.exit(fail?1:0);
 })();
