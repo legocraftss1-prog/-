@@ -1,0 +1,16 @@
+<!doctype html><html><body><script>
+function mk(){const t={};return new Proxy(function(){},{get:(o,k)=>{if(k==='then'||typeof k==='symbol')return undefined;if(k in t)return t[k];if(['position','rotation','scale','material','geometry','shadow','target','color','mapSize','camera'].includes(k))return t[k]=mk();return(...a)=>mk();},set:(o,k,v)=>{t[k]=v;return true;},apply:()=>mk(),construct:()=>mk()});}
+window.THREE=new Proxy({UniformsLib:{fog:{}},UniformsUtils:{merge:a=>({})},PCFSoftShadowMap:2,ACESFilmicToneMapping:4,BufferGeometry:function(){return {attributes:{},setAttribute(n,a){this.attributes[n]=a;}};},BufferAttribute:function(a){return {array:a,needsUpdate:false};},PointsMaterial:function(){return {opacity:1};},Points:function(g,m){return {geometry:g,material:m,userData:{},visible:true,position:{set(){}},frustumCulled:true};}},{get:(t,k)=>(k in t)?t[k]:function(){return mk();}});
+var worldReady=true,started=true;
+function mkMat(){return {isMeshLambertMaterial:true,userData:{},needsUpdate:false,transparent:false};}
+const meshes=[];for(let i=0;i<50;i++)meshes.push({isMesh:true,parent:{},material:mkMat(),geometry:{boundingSphere:{radius:10},computeBoundingSphere(){}},userData:{},castShadow:false,receiveShadow:false});
+var scene={add(){},remove(){},background:{},traverse(f){meshes.forEach(f);}};
+var renderer={_pr:2,getPixelRatio(){return this._pr;},setPixelRatio(v){this._pr=v;},setSize(){},toneMapping:0,toneMappingExposure:1,shadowMap:{enabled:false,type:0}};
+var camera={far:620,updateProjectionMatrix(){}};
+var sun={position:{x:40,y:80,z:30,add(p){this.x+=p.x;this.z+=p.z;return this;},copy(){return this;},clone(){return this;}},target:{position:{set(){},x:0},updateMatrixWorld(){}},shadow:{mapSize:{x:0,set(x){this.x=x;}},camera:{updateProjectionMatrix(){}}},castShadow:false};
+var fog={far:300,near:50},player={pos:{x:3,y:0,z:4},drive:null};
+function puffAt(x,y,z,c,n){window.__puffN=n;}function toast(t){(window.__t=window.__t||[]).push(t);}
+var phoneApp='settings';function renderPhone(){const b=document.getElementById('sheetBody');}
+function updEnv(dt){fog.far=300;}
+document.body.insertAdjacentHTML('beforeend','<div id="sheetBody"><h2>Настройки</h2></div>');
+</script><script src="../v111-gfx.js"></script></body></html>

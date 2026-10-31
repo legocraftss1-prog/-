@@ -1,0 +1,23 @@
+const { chromium } = require('/home/claude/.npm-global/lib/node_modules/playwright');
+let pass=0,fail=0;const ok=(c,n,x)=>{c?pass++:fail++;console.log(c?'  ✔':'  ✘ ПРОВАЛ:',n,c?'':JSON.stringify(x));};
+(async()=>{
+ const br=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox']});
+ const pg=await br.newPage();const errs=[];pg.on('pageerror',e=>errs.push(String(e)));pg.on('console',m=>{if(m.type()==='error')errs.push(m.text());});
+ await pg.goto('file:///home/claude/h3/index.html');await pg.waitForTimeout(500);
+ const base=await pg.evaluate(()=>({mode:MG_GFX.mode,tone:renderer.toneMapping,sh:renderer.shadowMap.enabled,far:camera.far,pr:renderer.getPixelRatio()}));
+ ok(base.mode==='classic'&&base.tone===0&&!base.sh&&base.far===620,'по умолчанию «Классическая»: рендерер не тронут',base);
+ const hd=await pg.evaluate(()=>{MG_GFX.set('hd');updEnv(.016);return {mode:MG_GFX.mode,tone:renderer.toneMapping,sh:renderer.shadowMap.enabled,far:camera.far,cast:meshes.filter(m=>m.castShadow).length,patched:meshes.filter(m=>m.material.userData.mgHD).length,fogFar:fog.far,body:document.body.classList.contains('mg-hd'),saved:localStorage.getItem('mg_gfx')};});
+ ok(hd.mode==='hd'&&hd.tone===4&&hd.sh&&hd.far>620&&hd.body,'«Улучшенная»: тоннинг, тени, дальность, UI-класс включены',hd);
+ ok(hd.patched>0&&hd.cast>0,'материалы дополнены деталью, тени расставлены',hd);
+ ok(hd.fogFar>300,'туман отодвинут (дальность прорисовки)',hd.fogFar);
+ ok(hd.saved==='hd','выбор режима сохранён в localStorage');
+ const back=await pg.evaluate(()=>{MG_GFX.set('classic');return {mode:MG_GFX.mode,tone:renderer.toneMapping,sh:renderer.shadowMap.enabled,far:camera.far,pr:renderer.getPixelRatio(),cast:meshes.filter(m=>m.castShadow).length,patched:meshes.filter(m=>m.material.userData.mgHD).length,body:document.body.classList.contains('mg-hd'),saved:localStorage.getItem('mg_gfx')};});
+ ok(back.mode==='classic'&&back.tone===0&&!back.sh&&back.far===620&&back.pr===2&&back.cast===0&&back.patched===0&&!back.body,'возврат в «Классическую» полностью восстанавливает исходные значения',back);
+ await pg.reload();await pg.waitForTimeout(400);
+ ok(await pg.evaluate(()=>MG_GFX.mode)==='classic','после перезагрузки режим сохраняется');
+ await pg.evaluate(()=>localStorage.setItem('mg_gfx','hd'));await pg.reload();await pg.waitForTimeout(700);
+ ok(await pg.evaluate(()=>renderer.toneMapping===4&&MG_GFX.applied),'сохранённый «hd» применяется сам при запуске');
+ await pg.evaluate(()=>{renderPhone();});
+ const e=errs.filter(x=>!/favicon/.test(x));ok(e.length===0,'ошибок в консоли нет',e.slice(0,3));
+ console.log('\n══ графика: '+pass+' ок, '+fail+' провалов ══');await br.close();process.exit(fail?1:0);
+})();
