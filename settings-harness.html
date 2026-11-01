@@ -1,0 +1,27 @@
+<!doctype html><html><head><meta charset="utf-8"><style>.hidden{display:none!important}#topBtns{position:fixed;right:10px;top:10px;display:flex;gap:8px}.sq{width:46px;height:46px}#rightBtns{position:fixed;right:10px;bottom:60px;display:flex;flex-direction:column;gap:8px}#rightBtns button{width:60px;height:60px}#joyBase{position:fixed;left:90px;top:600px;width:100px;height:100px}#title{padding:20px}</style></head><body>
+<div id="title"><div id="menu"></div></div>
+<div id="topBtns"><button class="sq" id="bTodo">📋</button><button class="sq" id="bInv">🎒</button><button class="sq" id="bPhone">📱</button><button class="sq off" id="bSwitch">🔄</button></div>
+<div id="rightBtns"><button id="bAct">✋</button><button id="bRun">🏃</button><button id="bJump">⤴️</button><button id="bFire" class="hidden">💥</button></div>
+<div id="joyBase"></div><div id="sheetBody"></div>
+<script>
+function mk(){const t={};return new Proxy(function(){},{get:(o,k)=>{if(k==='then'||typeof k==='symbol')return undefined;if(k in t)return t[k];if(['position','rotation','scale','material','geometry','shadow','target','color','mapSize','camera'].includes(k))return t[k]=mk();return(...a)=>mk();},set:(o,k,v)=>{t[k]=v;return true;},apply:()=>mk(),construct:()=>mk()});}
+class V3{constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;}set(x,y,z){this.x=x;this.y=y;this.z=z;return this;}copy(v){this.x=v.x;this.y=v.y;this.z=v.z;return this;}clone(){return new V3(this.x,this.y,this.z);}
+ add(v){this.x+=v.x;this.y+=v.y;this.z+=v.z;return this;}sub(v){this.x-=v.x;this.y-=v.y;this.z-=v.z;return this;}addScaledVector(v,s){this.x+=v.x*s;this.y+=v.y*s;this.z+=v.z*s;return this;}
+ lerp(v,t){this.x+=(v.x-this.x)*t;this.y+=(v.y-this.y)*t;this.z+=(v.z-this.z)*t;return this;}length(){return Math.hypot(this.x,this.y,this.z);}normalize(){const l=this.length()||1;this.x/=l;this.y/=l;this.z/=l;return this;}}
+window.THREE=new Proxy({Vector3:V3,UniformsLib:{fog:{}},UniformsUtils:{merge:a=>({})},PCFSoftShadowMap:2,ACESFilmicToneMapping:4,LinearFilter:1006,
+ BufferGeometry:function(){return {attributes:{},setAttribute(n,a){this.attributes[n]=a;}};},BufferAttribute:function(a){return {array:a,needsUpdate:false};},PointsMaterial:function(){return {opacity:1};},Points:function(g,m){return {geometry:g,material:m,userData:{},visible:true,position:{set(){}},frustumCulled:true};}},
+ {get:(t,k)=>(k in t)?t[k]:function(){return mk();}});
+var worldReady=true,started=true,area='city',toasts=[];function toast(t){toasts.push(t);}
+function sfx(){}function puffAt(){}function blocked(){return false;}function closeModal(){}
+var cam={yaw:0,pitch:.36,dist:6.2,drag:0,force:null,fixed:null};
+var player={pos:new V3(10,0,20),yaw:0.5,g:{position:new V3(10,0,20),visible:true},drive:null};
+var camera={position:new V3(0,5,0),near:.1,far:620,fov:62,_look:new V3(0,0,-1),lookAt(x,y,z){const d=new V3(x-this.position.x,y-this.position.y,z-this.position.z).normalize();this._look=d;this.looks=(this.looks||0)+1;},getWorldDirection(o){o.copy(this._look);return o;},updateProjectionMatrix(){}};
+var rc={set(){},far:0,intersectObjects(){return window.__hit?[{distance:window.__hit}]:[];}};var camBlock={city:[]};
+function updCamera(dt){camera.position.set(player.pos.x+Math.sin(cam.yaw)*6,player.pos.y+4,player.pos.z+Math.cos(cam.yaw)*6);camera.lookAt(player.pos.x,player.pos.y+1.45,player.pos.z);}
+var scene={add(){},remove(){},background:{},traverse(){}};
+var meshes=[];var renderer={domElement:{style:{filter:''}},_pr:2,getPixelRatio(){return this._pr;},setPixelRatio(v){this._pr=v;},setSize(){},toneMapping:0,toneMappingExposure:1,shadowMap:{enabled:false,type:0},capabilities:{getMaxAnisotropy:()=>8},renders:0,render(){this.renders++;},getContext(){return {getContextAttributes:()=>({antialias:true})};}};
+var sun={position:new V3(40,80,30),target:{position:new V3(),updateMatrixWorld(){}},shadow:{mapSize:{x:0,set(x){this.x=x;}},camera:{updateProjectionMatrix(){}}},castShadow:false};
+var fog={far:300,near:50};function updEnv(){}function renderPhone(){}
+window.__keys=[];addEventListener('keydown',e=>window.__keys.push(e.code));
+</script>
+<script src="../proj/v111-gfx.js"></script><script src="../proj/v112-settings.js"></script></body></html>

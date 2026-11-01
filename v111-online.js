@@ -561,16 +561,7 @@
   }
   O.buildLayer = buildChaosLayer;
 
-  /* ================= вход с экрана заголовка ================= */
-  function addTitleButton() {
-    var menu = document.getElementById('menu'); if (!menu || menu.querySelector('[data-mg-srv]')) return;
-    var first = menu.querySelector('button'); if (!first || first.textContent.indexOf('Играть') < 0) return;
-    var b = document.createElement('button'); b.setAttribute('data-mg-srv', '1'); b.style.cssText = 'width:100%;font-size:18px;padding:14px 16px;text-align:left;background:linear-gradient(180deg,#e8473b,#a82a20);color:#fff';
-    b.textContent = '🌪️ Сервер «ХАОС» (онлайн)'; b.onclick = openPanel; first.insertAdjacentElement('afterend', b);
-  }
-  var mo = new MutationObserver(function () { try { addTitleButton(); } catch (e) { } });
-  function boot() { var menu = document.getElementById('menu'); if (menu) { mo.observe(menu, { childList: true }); addTitleButton(); } else setTimeout(boot, 200); }
-  boot();
+  /* Кнопка входа в «ХАОС» теперь находится в разделе «Вместе» главного меню (её добавляет v112-settings.js). */
   // клавиша Tab открывает панель в игре (ПК)
   addEventListener('keydown', function (e) { if (O.active && e.code === 'Tab') { e.preventDefault(); if (ui.root && ui.root.classList.contains('on')) closePanel(); else openPanel(); } });
   addEventListener('beforeunload', function () { try { if (O.active) send({ t: 'leave' }); } catch (e) { } });

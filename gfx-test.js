@@ -36,16 +36,13 @@ let pass=0,fail=0;const ok=(c,n,x)=>{c?pass++:fail++;console.log(c?'  ✔':'  �
  const gm=await pg.evaluate(()=>{MG_GFX.setOpt('gamma',1.3);const a=renderer.domElement.style.filter;MG_GFX.setOpt('bright',1.2);MG_GFX.setOpt('sat',.8);const b=renderer.domElement.style.filter;const ex=document.querySelector('#mg-gamma feFuncR')?.getAttribute('exponent');MG_GFX.setOpt('gamma',1);MG_GFX.setOpt('bright',1);MG_GFX.setOpt('sat',1);return {a,b,ex,c:renderer.domElement.style.filter};});
  ok(gm.a!==''&&/brightness|url/.test(gm.a)&&gm.b.includes('saturate(0.8)')&&gm.b.includes('brightness(1.2)')&&gm.c==='','гамма/яркость/насыщенность применяются к холсту и снимаются на 100%',gm);
  await pg.evaluate(()=>{MG_GFX.setOpt('gamma',1.3);MG_GFX.set('classic');});
- ok((await st()).filter==='','в классике экранные фильтры не действуют');
+ ok((await st()).filter!=='','яркость/гамма/контраст действуют и в классике (1.12)');await pg.evaluate(()=>MG_GFX.setOpt('gamma',1));
  await pg.evaluate(()=>{MG_GFX.set('hd');MG_GFX.setOpt('fps',true);updEnv(.5);updEnv(.5);});
  ok(await pg.evaluate(()=>[...document.querySelectorAll('div')].some(d=>/FPS/.test(d.textContent)&&d.style.display==='block')),'счётчик FPS показывается');
  console.log('--- сохранение и интерфейс');
  await pg.evaluate(()=>{MG_GFX.setOpt('cam',1.4);MG_GFX.setOpt('shadowQ',2);});await pg.reload();await pg.evaluate(()=>localStorage.setItem('mg_gfx','hd'));await pg.reload();await pg.waitForTimeout(700);
  const o7=await pg.evaluate(()=>({cam:MG_GFX.opt.cam,q:MG_GFX.opt.shadowQ,applied:MG_GFX.applied}));
  ok(o7.cam===1.4&&o7.q===2&&o7.applied,'все настройки сохраняются и применяются при запуске',o7);
- await pg.evaluate(()=>{phoneApp='settings';document.getElementById('sheetBody').innerHTML='<h2>Настройки</h2>';renderPhone();});
- const ui=await pg.evaluate(()=>({sliders:document.querySelectorAll('[data-mg-gfx] input[type=range]').length,btns:document.querySelectorAll('[data-mg-gfx] button').length}));
- ok(ui.sliders===6&&ui.btns>=12,'в настройках: 6 ползунков и все переключатели',ui);
  await pg.evaluate(()=>{MG_GFX.reset();});const df=await pg.evaluate(()=>JSON.stringify(MG_GFX.opt)===JSON.stringify(MG_GFX.DEF));ok(df,'«Сбросить» возвращает рекомендуемые значения');
  await pg.evaluate(()=>{localStorage.setItem('mg_gfx_opt2',JSON.stringify({texMap:false,cam:99,gamma:'abc'}));});await pg.reload();await pg.waitForTimeout(400);
  ok(await pg.evaluate(()=>MG_GFX.opt.cam===2&&MG_GFX.opt.gamma===1&&MG_GFX.opt.texMap===false),'испорченные сохранённые значения безопасно приводятся к допустимым');

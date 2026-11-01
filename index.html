@@ -295,7 +295,7 @@ body.busy #controls *{pointer-events:none}
   <h1>Марья,<br>Гусь<br>и абсурдный город</h1>
   <div class="tag">Обычный район. Обычные дворы. Над домом летит собака. Никто не реагирует.</div>
   <div class="bt"><button id="bPlay" disabled><span id="loading">Город загружается…</span></button><button id="bNew" class="alt hidden">Новая игра</button></div>
-  <div class="hint">VERSION 1.11 «ХАОС-СЕРВЕР» Левая часть экрана — ходить, правая — камера. ПК: WASD, Shift, E, Q, F, пробел — прыжок.</div>
+  <div class="hint">VERSION 1.12 «Карта и удобство» Левая часть экрана — ходить, правая — камера. ПК: WASD, Shift, E, Q, F, пробел — прыжок.</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -317,7 +317,7 @@ function seeded(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.
 
 /* ================= renderer ================= */
 const canvas=$('c');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+const renderer=new THREE.WebGLRenderer({canvas,antialias:(function(){try{return localStorage.getItem('mg_aa')!=='0';}catch(e){return true;}})(),powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(62,1,0.1,620);
@@ -4054,7 +4054,7 @@ renderPhone=function(){if(!['invites','settings','dev'].includes(phoneApp)){_ren
       rowBtn(b,'❌ Отказаться','','Нет',()=>{SKEV.state='none';notify('Отказ отправлен. Позовут в другой раз.','🛹');renderPhone();});}
     else if(SKEV.state==='accepted')line('⭐ Ты участвуешь: скейт-парк «Доска», сегодня с 18:00. Метка на карте.');
     else line('Новых приглашений нет. Они приходят, когда изучено 4+ трюка — не чаще раза в пару игровых дней.');}
-  if(phoneApp==='settings'){h.textContent='⚙️ Настройки · VERSION 1.11 «ХАОС-СЕРВЕР»';
+  if(phoneApp==='settings'){h.textContent='⚙️ Настройки · VERSION 1.12 «Карта и удобство»';
     rowBtn(b,'🚪 Выйти в главное меню',COOP.on?(COOP.host?'прогресс сохранится у тебя':'прогресс сохранится у создателя комнаты'):'игра сохранится','Выйти',()=>exitToMenu());line('💾 Автосохранение: каждые 20 секунд и при сворачивании. Сохраняется всё: деньги, транспорт, позиции, трюки, бизнес, сюжет, вещи, мир.',15);
     if(S.savedAt)line('Последнее сохранение: '+new Date(S.savedAt).toLocaleTimeString('ru-RU'),15);
     rowBtn(b,'💾 Сохранить сейчас (слот '+SAVE_SLOT+')','','Сохранить',()=>{fullSave(true);renderPhone();});slotsPanel(b);
@@ -6750,7 +6750,7 @@ $('joyZone').addEventListener('pointerdown',e=>{if(joy.id!==null)return;e.preven
 addEventListener('pointermove',e=>{
   if(e.pointerId===joy.id){let dx=e.clientX-joy.sx,dy=e.clientY-joy.sy;const l=Math.hypot(dx,dy),m=55;if(l>m){dx*=m/l;dy*=m/l;}
     joy.x=dx/m;joy.y=dy/m;jk.style.transform=`translate(${dx}px,${dy}px)`;}
-  else if(e.pointerId===look.id){if(cam.force){cam.fOff=(cam.fOff||0)-(e.clientX-look.lx)*.0065;cam.fpOff=clamp((cam.fpOff||0)+(e.clientY-look.ly)*.0045,-.5,.9);}else{cam.yaw-=(e.clientX-look.lx)*.0065;cam.pitch=clamp(cam.pitch+(e.clientY-look.ly)*.0045,.04,1.2);}look.lx=e.clientX;look.ly=e.clientY;cam.drag=1.8;}});
+  else if(e.pointerId===look.id){if(cam.force){cam.fOff=(cam.fOff||0)-(e.clientX-look.lx)*.0065*(window.MG_SENS||1);cam.fpOff=clamp((cam.fpOff||0)+(e.clientY-look.ly)*.0045*(window.MG_SENS||1),-.5,.9);}else{cam.yaw-=(e.clientX-look.lx)*.0065*(window.MG_SENS||1);cam.pitch=clamp(cam.pitch+(e.clientY-look.ly)*.0045*(window.MG_SENS||1),.04,1.2);}look.lx=e.clientX;look.ly=e.clientY;cam.drag=1.8;}});
 function endPtr(e){if(e.pointerId===joy.id)joyReset();if(e.pointerId===look.id)look.id=null;}
 addEventListener('pointerup',endPtr);addEventListener('pointercancel',endPtr);
 canvas.addEventListener('pointerdown',e=>{if(look.id!==null)return;look.id=e.pointerId;look.lx=e.clientX;look.ly=e.clientY;});
@@ -7024,5 +7024,9 @@ requestAnimationFrame(loop);init();
 <script src="v111-water.js"></script>
 <script src="v111-online.js"></script>
 <script src="v111-debug.js"></script>
+<script src="v112-settings.js"></script>
+<script src="v112-map.js"></script>
+<script src="v112-business.js"></script>
+<script src="v112-districts.js"></script>
 </body>
 </html>

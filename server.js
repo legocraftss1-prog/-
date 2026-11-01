@@ -22,7 +22,7 @@ const CFG = {
   trustProxy: process.env.TRUST_PROXY === '1',
   roomMax: +process.env.ROOM_MAX || 25,
   privateMax: 2,
-  version: '1.11',
+  version: '1.12',
   sessionDays: 60,
   smallEvery: [14, 30],      // секунд между малыми событиями
   bigEvery: 210,             // секунд между крупными событиями

@@ -9,7 +9,7 @@
 (function () {
   'use strict';
   var KEY = 'mg_gfx', OKEY = 'mg_gfx_opt2';
-  var DEF = { texMap: true, texUI: true, water: true, fx: true, shadows: true, shadowQ: 1, tone: true, dist: 1.3, cam: 1, res: 1, gamma: 1, bright: 1, sat: 1, fps: false };
+  var DEF = { texMap: true, texUI: true, water: true, fx: true, shadows: true, shadowQ: 1, tone: true, dist: 1.3, distC: 1, cam: 1, res: 1, gamma: 1, bright: 1, contrast: 1, sat: 1, fps: false, texQ: 1, fpsCap: 0 };
   var GFX = { mode: 'classic', tier: 0, auto: true, applied: false, opt: JSON.parse(JSON.stringify(DEF)), DEF: DEF };
   try { GFX.mode = localStorage.getItem(KEY) === 'hd' ? 'hd' : 'classic'; } catch (e) { }
   try { GFX.auto = localStorage.getItem('mg_gfx_auto') !== '0'; } catch (e) { }
@@ -22,7 +22,7 @@
     if (so) {
       ['texMap', 'texUI', 'water', 'fx', 'shadows', 'tone', 'fps'].forEach(function (k) { if (so[k] !== undefined) GFX.opt[k] = !!so[k]; });
       GFX.opt.shadowQ = Math.round(clampN(so.shadowQ, 0, 2, 1)); GFX.opt.dist = clampN(so.dist, .7, 1.8, 1.3); GFX.opt.cam = clampN(so.cam, .7, 2, 1);
-      GFX.opt.res = clampN(so.res, .5, 1, 1); GFX.opt.gamma = clampN(so.gamma, .7, 1.5, 1); GFX.opt.bright = clampN(so.bright, .7, 1.4, 1); GFX.opt.sat = clampN(so.sat, .5, 1.6, 1);
+      GFX.opt.res = clampN(so.res, .5, 1.5, 1); GFX.opt.distC = clampN(so.distC, .5, 1.8, 1); GFX.opt.contrast = clampN(so.contrast, .7, 1.5, 1); GFX.opt.texQ = Math.round(clampN(so.texQ, 0, 2, 1)); GFX.opt.fpsCap = [0, 30, 45, 60].indexOf(+so.fpsCap) >= 0 ? +so.fpsCap : 0; GFX.opt.gamma = clampN(so.gamma, .7, 1.5, 1); GFX.opt.bright = clampN(so.bright, .7, 1.4, 1); GFX.opt.sat = clampN(so.sat, .5, 1.6, 1);
     }
   } catch (e) { }
   function saveOpt() { try { localStorage.setItem(OKEY, JSON.stringify(GFX.opt)); } catch (e) { } }
@@ -155,8 +155,8 @@
   var sunTargetAdded = false;
   var SM = MOBILE ? [512, 1024, 1024] : [1024, 2048, 4096];
   function tierParams() {
-    var t = GFX.tier, O = GFX.opt, d = O.dist;
-    if (t >= 2) d = Math.min(d, 1);
+    var t = GFX.tier, O = GFX.opt, d = GFX.mode === 'hd' ? O.dist : O.distC;
+    if (t >= 2 && GFX.mode === 'hd') d = Math.min(d, 1);
     var q = Math.max(0, Math.round(O.shadowQ) - (t >= 1 ? 1 : 0));
     return {
       shadows: O.shadows && t < 2, sm: SM[Math.min(2, q)], half: MOBILE ? 42 : 70,
@@ -188,28 +188,70 @@
   function gammaSupported() { if (gammaOK === null) { try { gammaOK = !!(window.CSS && CSS.supports && CSS.supports('filter', 'url(#a)')) && !/iPhone|iPad|iPod/i.test(navigator.userAgent); } catch (e) { gammaOK = false; } } return gammaOK; }
   GFX.gammaSupported = gammaSupported;
   function applyScreen() {
-    var cv = renderer.domElement, O = GFX.opt, on = GFX.mode === 'hd';
-    var g = on ? O.gamma : 1, b = on ? O.bright : 1, s = on ? O.sat : 1;
-    if (!on || (Math.abs(g - 1) < .01 && Math.abs(b - 1) < .01 && Math.abs(s - 1) < .01)) { cv.style.filter = ''; return; }
+    var cv = renderer.domElement, O = GFX.opt;
+    var g = O.gamma, b = O.bright, s = O.sat, c = O.contrast;
+    if (Math.abs(g - 1) < .01 && Math.abs(b - 1) < .01 && Math.abs(s - 1) < .01 && Math.abs(c - 1) < .01) { cv.style.filter = ''; return; }
     var parts = [];
     if (Math.abs(g - 1) >= .01) {
       if (gammaSupported()) {
         if (!gammaSvg) { var d = document.createElement('div'); d.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden'; d.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0"><filter id="mg-gamma" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="gamma" amplitude="1" exponent="1" offset="0"/><feFuncG type="gamma" amplitude="1" exponent="1" offset="0"/><feFuncB type="gamma" amplitude="1" exponent="1" offset="0"/></feComponentTransfer></filter></svg>'; document.body.appendChild(d); gammaSvg = d; }
         gammaSvg.querySelectorAll('feFuncR,feFuncG,feFuncB').forEach(function (f) { f.setAttribute('exponent', String(1 / g)); });
         parts.push('url(#mg-gamma)');
-      } else { // запасной вариант для устройств без SVG-фильтров (iPhone): приближение яркостью и контрастом
-        parts.push('brightness(' + Math.pow(g, -.55).toFixed(3) + ')'); parts.push('contrast(' + (1 + (1 - g) * .25).toFixed(3) + ')');
-      }
+      } else { parts.push('brightness(' + Math.pow(g, -.55).toFixed(3) + ')'); parts.push('contrast(' + (1 + (1 - g) * .25).toFixed(3) + ')'); }
     }
     if (Math.abs(b - 1) >= .01) parts.push('brightness(' + b + ')');
+    if (Math.abs(c - 1) >= .01) parts.push('contrast(' + c + ')');
     if (Math.abs(s - 1) >= .01) parts.push('saturate(' + s + ')');
     cv.style.filter = parts.join(' ');
+  }
+
+  /* ---------- качество текстур (работает в обоих режимах) ---------- */
+  function texMesh(o, seen) {
+    var m = o.material; if (!m) return; var arr = Array.isArray(m) ? m : [m], q = GFX.opt.texQ;
+    var maxA = (renderer.capabilities && renderer.capabilities.getMaxAnisotropy) ? renderer.capabilities.getMaxAnisotropy() : 1;
+    arr.forEach(function (mm) {
+      ['map', 'emissiveMap', 'alphaMap'].forEach(function (k) {
+        var t = mm && mm[k]; if (!t || seen.has(t)) return; seen.add(t);
+        if (!t.userData) t.userData = {};
+        if (!t.userData.mgT) { if (q === 1) return; t.userData.mgT = { a: t.anisotropy, f: t.minFilter }; }
+        var o0 = t.userData.mgT, na, nf;
+        if (q === 1) { na = o0.a; nf = o0.f; }
+        else if (q === 2) { na = Math.min(16, maxA); nf = o0.f; }
+        else { na = 1; nf = THREE.LinearFilter; }
+        if (t.anisotropy !== na || t.minFilter !== nf) { t.anisotropy = na; t.minFilter = nf; t.needsUpdate = true; }
+      });
+    });
+  }
+  function applyTexQ() { var seen = new Set(); scene.traverse(function (o) { if (o.isMesh) texMesh(o, seen); }); }
+
+  /* ---------- общие настройки, действующие и в классике (нейтральные значения ничего не меняют) ---------- */
+  function applyCommon() {
+    saveOrig(); var O = GFX.opt;
+    if (GFX.mode !== 'hd') {
+      var d = O.distC, neutral = Math.abs(d - 1) < .001, rs = O.res;
+      renderer.setPixelRatio(rs === 1 ? ORIG.pr : Math.max(.5, Math.min(ORIG.pr * rs, Math.max(ORIG.pr, (window.devicePixelRatio || 1) * 1.5)))); renderer.setSize(innerWidth, innerHeight, false);
+      camera.far = neutral ? ORIG.far : Math.round(ORIG.far * d); camera.updateProjectionMatrix();
+      window.MG_CULL = neutral ? ORIG.cullV : Math.round(420 * d); GFX.fogMul = neutral ? 1 : d;
+    }
+    applyScreen(); applyTexQ(); installCap();
+  }
+
+  /* ---------- лимит FPS: пропускаем отрисовку кадров сверх лимита ---------- */
+  var capInstalled = false, lastRender = 0;
+  function installCap() {
+    if (capInstalled) return; capInstalled = true;
+    var orig = renderer.render;
+    renderer.render = function (a, b) {
+      var cap = GFX.opt.fpsCap;
+      if (cap) { var now = performance.now(); if (now - lastRender < 1000 / cap - 2.5) return; lastRender = now; }
+      return orig.call(renderer, a, b);
+    };
   }
 
   /* ---------- счётчик FPS ---------- */
   var fpsEl = null, fpsAcc = 0, fpsN = 0, fpsT = 0;
   function fpsTick(dt) {
-    if (!GFX.opt.fps || GFX.mode !== 'hd') { if (fpsEl) fpsEl.style.display = 'none'; return; }
+    if (!GFX.opt.fps) { if (fpsEl) fpsEl.style.display = 'none'; return; }
     if (!fpsEl) { fpsEl = document.createElement('div'); fpsEl.style.cssText = 'position:fixed;right:6px;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);z-index:70;background:rgba(0,0,0,.6);color:#9dff9d;font:700 12px monospace;padding:3px 7px;border-radius:7px;pointer-events:none'; document.body.appendChild(fpsEl); }
     fpsEl.style.display = 'block'; fpsAcc += dt; fpsN++; fpsT += dt;
     if (fpsT >= .5) { fpsEl.textContent = Math.round(fpsN / fpsT) + ' FPS' + (GFX.tier ? ' · ур.' + GFX.tier : ''); fpsT = 0; fpsN = 0; }
@@ -235,11 +277,11 @@
     document.body.classList.toggle('mg-hd', !!O.texUI);
     scene.traverse(function (o) { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
     rescan(); processQueue(MOBILE ? 800 : 2500);
-    touchMats(); applyScreen();
+    touchMats(); applyScreen(); applyTexQ(); installCap();
     GFX.applied = true;
   }
   function applyClassic() {
-    if (!ORIG) { document.body.classList.remove('mg-hd'); GFX.applied = false; try { applyScreen(); } catch (e) { } return; }
+    if (!ORIG) { document.body.classList.remove('mg-hd'); GFX.applied = false; return; }
     renderer.toneMapping = ORIG.tone; renderer.toneMappingExposure = ORIG.exp;
     renderer.shadowMap.enabled = ORIG.shadow; sun.castShadow = false;
     renderer.setPixelRatio(ORIG.pr); renderer.setSize(innerWidth, innerHeight, false);
@@ -249,7 +291,7 @@
     if (dust) dust.visible = false;
     if (origPuff) { window.puffAt = puffAt = origPuff; origPuff = null; }
     GFX.fogMul = 1; document.body.classList.remove('mg-hd');
-    touchMats(); applyScreen(); GFX.applied = false;
+    touchMats(); GFX.applied = false; applyCommon();
   }
   GFX.set = function (mode) {
     GFX.mode = mode === 'hd' ? 'hd' : 'classic';
@@ -259,20 +301,26 @@
   };
   var LIVE = { dist: 1, cam: 1, res: 1, gamma: 1, bright: 1, sat: 1 };
   GFX.setOpt = function (key, val, live) {
-    var lim = { dist: [.7, 1.8], cam: [.7, 2], res: [.5, 1], gamma: [.7, 1.5], bright: [.7, 1.4], sat: [.5, 1.6] };
-    if (lim[key]) val = clampN(val, lim[key][0], lim[key][1], DEF[key]); else if (key === 'shadowQ') val = Math.round(clampN(val, 0, 2, 1)); else val = !!val;
+    var lim = { dist: [.7, 1.8], distC: [.5, 1.8], cam: [.7, 2], res: [.5, 1.5], gamma: [.7, 1.5], bright: [.7, 1.4], contrast: [.7, 1.5], sat: [.5, 1.6] };
+    if (lim[key]) val = clampN(val, lim[key][0], lim[key][1], DEF[key]);
+    else if (key === 'shadowQ' || key === 'texQ') val = Math.round(clampN(val, 0, 2, 1));
+    else if (key === 'fpsCap') val = [0, 30, 45, 60].indexOf(+val) >= 0 ? +val : 0;
+    else val = !!val;
     GFX.opt[key] = val; saveOpt();
-    if (!ready() || GFX.mode !== 'hd') return;
+    if (!ready()) return;
     try {
-      if (key === 'cam') return;
+      if (key === 'cam' || key === 'fps') return;
+      saveOrig();
+      if (key === 'gamma' || key === 'bright' || key === 'sat' || key === 'contrast') return applyScreen();
+      if (key === 'texQ') return applyTexQ();
+      if (key === 'fpsCap') return;
+      if (GFX.mode !== 'hd') { if (key === 'dist' || key === 'distC' || key === 'res') applyCommon(); return; }
       if (key === 'dist') { var P = tierParams(); window.MG_CULL = P.cull; camera.far = P.far; camera.updateProjectionMatrix(); GFX.fogMul = P.fogMul; }
       else if (key === 'res') applyTier();
-      else if (key === 'gamma' || key === 'bright' || key === 'sat') applyScreen();
-      else if (key === 'fps') { }
-      else sync();
+      else if (key !== 'distC') sync();
     } catch (e) { console.error('[MG_GFX]', e); }
   };
-  GFX.reset = function () { GFX.opt = JSON.parse(JSON.stringify(DEF)); saveOpt(); if (ready() && GFX.mode === 'hd') { try { sync(); } catch (e) { console.error(e); } } };
+  GFX.reset = function () { GFX.opt = JSON.parse(JSON.stringify(DEF)); saveOpt(); if (ready()) { try { sync(); } catch (e) { console.error(e); } } };
   GFX.setAuto = function (on) { GFX.auto = !!on; try { localStorage.setItem('mg_gfx_auto', on ? '1' : '0'); } catch (e) { } };
 
   /* ---------- покадровая часть ---------- */
@@ -280,6 +328,7 @@
   function frame(dt) {
     var now = performance.now(), ft = now - lastT; lastT = now;
     fpsTick(dt);
+    if (GFX.mode !== 'hd' && GFX.opt.texQ !== 1) { scanT -= dt; if (scanT <= 0) { scanT = 6; applyTexQ(); } }
     if (GFX.mode !== 'hd' || !GFX.applied) return;
     if (ft < 250) fpsEma += (ft - fpsEma) * .05;
     if (GFX.auto && typeof started !== 'undefined' && started) {
@@ -302,7 +351,7 @@
     if (typeof sun !== 'undefined') waterUniforms.uSun.value.copy(sun.position).sub(sun.target.position).normalize();
     if (typeof scene !== 'undefined' && scene.background) waterUniforms.uSky.value.copy(scene.background);
     if (typeof fog !== 'undefined' && GFX.fogMul !== 1) { fog.far *= GFX.fogMul; if (GFX.fogMul > 1) fog.near *= (1 + (GFX.fogMul - 1) * .6); }
-    scanT -= dt; if (scanT <= 0) { scanT = 4; rescan(); }
+    scanT -= dt; if (scanT <= 0) { scanT = 4; rescan(); if (GFX.opt.texQ !== 1) applyTexQ(); }
     processQueue(MOBILE ? 500 : 1200);
   }
 
@@ -318,7 +367,7 @@
     if (typeof updCamera === 'function' && !updCamera.__mgGfx) {
       var oc = updCamera;
       var wc = function (dt) {
-        var m = (GFX.mode === 'hd') ? GFX.opt.cam : 1;
+        var m = GFX.opt.cam;
         if (m === 1) return oc(dt);
         var base = window.CAMMUL; window.CAMMUL = (base || 1) * m;
         try { return oc(dt); } finally { window.CAMMUL = base; }
@@ -326,6 +375,7 @@
       wc.__mgGfx = true; window.updCamera = updCamera = wc;
     }
     if (GFX.mode === 'hd' && !GFX.applied) { try { sync(); } catch (e) { console.error('[MG_GFX]', e); } }
+    else if (GFX.mode !== 'hd') { try { applyCommon(); } catch (e) { console.error('[MG_GFX]', e); } }
     return true;
   }
   var tries = setInterval(function () { if (hook()) clearInterval(tries); }, 150);
@@ -334,87 +384,33 @@
   /* ---------- интерфейс «улучшенной» графики (текстуры кнопок/панелей) ---------- */
   var css = document.createElement('style');
   css.textContent = [
-    'body.mg-hd{--glass:rgba(16,22,34,.58)}',
-    'body.mg-hd #obj,body.mg-hd #sheet,body.mg-hd #dBox,body.mg-hd #phCard,body.mg-hd .tst,body.mg-hd #hpbar,body.mg-hd #coopPill,body.mg-hd #mini{backdrop-filter:blur(10px) saturate(1.3);-webkit-backdrop-filter:blur(10px) saturate(1.3);box-shadow:0 8px 28px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18)}',
-    'body.mg-hd #sheet{background:linear-gradient(160deg,rgba(32,42,62,.82),rgba(14,18,28,.88))}',
-    'body.mg-hd #rightBtns button,body.mg-hd .sq{background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.08));box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}',
-    'body.mg-hd .pbtn.main,body.mg-hd #title button{background:linear-gradient(180deg,#ffb15a,#ff6a13);box-shadow:0 6px 18px rgba(255,106,19,.45),inset 0 1px 0 rgba(255,255,255,.5)}',
-    'body.mg-hd #title button.alt{background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.06));box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}',
+    /* Улучшенный интерфейс: ТЁМНЫЕ панели и БЕЛЫЙ текст. Белый цвет задаём контейнерам, а у вложенных элементов
+       с собственными цветами (кнопки, вкладки, отметки) — свои правила; остальное добивает автоконтраст (v112-settings.js). */
+    'body.mg-hd{--glass:rgba(16,22,34,.72)}',
+    'body.mg-hd #obj,body.mg-hd .tst,body.mg-hd #hpbar,body.mg-hd #coopPill,body.mg-hd #mini{backdrop-filter:blur(10px) saturate(1.3);-webkit-backdrop-filter:blur(10px) saturate(1.3);box-shadow:0 8px 28px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);color:#fff}',
+    'body.mg-hd #sheet{background:linear-gradient(160deg,#242c40,#12161f);color:#fff;box-shadow:0 10px 0 rgba(0,0,0,.45),0 18px 40px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.18)}',
+    'body.mg-hd #sheetBody{color:#fff;background-image:linear-gradient(90deg,transparent 32px,rgba(231,120,120,.55) 32px 34px,transparent 34px),repeating-linear-gradient(transparent 0 31px,rgba(255,255,255,.09) 31px 32px)}',
+    'body.mg-hd #sheetBody h2,body.mg-hd .ti,body.mg-hd .ti .tx,body.mg-hd .ti .nm,body.mg-hd .sec,body.mg-hd .inv,body.mg-hd .inv span,body.mg-hd .row{color:#fff}',
+    'body.mg-hd .ti .wh{opacity:.8}',
+    'body.mg-hd .ti .st{color:#7be39b}',
+    'body.mg-hd .sec{border-top-color:rgba(255,255,255,.28)}',
+    'body.mg-hd #sheetFoot{border-top-color:rgba(255,255,255,.2)}',
+    'body.mg-hd .tab{background:#2a3347;color:#fff;border-color:rgba(255,255,255,.45)}',
+    'body.mg-hd .tab.act{background:#12161f;color:#ffcf4a}',
+    'body.mg-hd .pbtn,body.mg-hd .inv button,body.mg-hd .chip{background:rgba(255,255,255,.13);color:#fff;border-color:rgba(255,255,255,.5)}',
+    'body.mg-hd .pbtn.main,body.mg-hd .chip.act{background:linear-gradient(180deg,#ffb15a,#ff8a2a);color:#241100;border-color:#ffd9a8;box-shadow:0 4px 14px rgba(255,138,42,.4)}',
+    'body.mg-hd #gText,body.mg-hd #sheet input,body.mg-hd #sheet select,body.mg-hd #sheet textarea{background:#0d1017;color:#fff;border-color:rgba(255,255,255,.5)}',
+    'body.mg-hd #gErr{color:#ff9a90}',
+    'body.mg-hd #dBox{background:rgba(16,20,30,.94);color:#fff;border-color:rgba(255,255,255,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}',
+    'body.mg-hd #dBox *{color:inherit}',
+    'body.mg-hd #rightBtns button,body.mg-hd .sq{background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,.08));color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.3);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}',
+    'body.mg-hd #title button{background:linear-gradient(180deg,#ffb15a,#ff6a13);color:#241100;box-shadow:0 6px 18px rgba(255,106,19,.45),inset 0 1px 0 rgba(255,255,255,.5)}',
+    'body.mg-hd #title button.alt{background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.07));color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}',
     'body.mg-hd #hpbar>*,body.mg-hd #hpbar{border-radius:12px}',
     'body.mg-hd #joyBase{box-shadow:0 0 0 2px rgba(255,255,255,.25),0 6px 20px rgba(0,0,0,.35);backdrop-filter:blur(4px)}'
   ].join('\n');
   document.head.appendChild(css);
 
-  /* ---------- настройки (телефон → ⚙️) ---------- */
-  function hookSettings() {
-    if (typeof renderPhone !== 'function' || renderPhone.__mgGfx) return false;
-    var prev = renderPhone;
-    var w = function () {
-      prev.apply(this, arguments);
-      try {
-        if (typeof phoneApp === 'undefined' || phoneApp !== 'settings') return;
-        var b = document.getElementById('sheetBody'); if (!b || b.querySelector('[data-mg-gfx]')) return;
-        var box = document.createElement('div'); box.setAttribute('data-mg-gfx', '1'); box.style.cssText = 'margin:8px 0 12px;padding:10px;border-radius:14px;background:rgba(255,255,255,.07)';
-        function H(t) { var h = document.createElement('div'); h.style.cssText = 'font-weight:900;font-size:' + (t.big ? 16 : 13) + 'px;margin:' + (t.big ? '0 0 8px' : '14px 0 2px') + ';' + (t.big ? '' : 'color:#ffcf4a;text-transform:uppercase;letter-spacing:.5px'); h.textContent = t.t; return h; }
-        box.appendChild(H({ t: '🎨 Графика', big: true }));
-        var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
-        function modeBtn(label, sub, mode) {
-          var x = document.createElement('button'); x.className = 'pbtn' + (GFX.mode === mode ? ' main' : ''); x.style.cssText = 'flex:1;min-width:140px;text-align:left;padding:10px 12px';
-          x.innerHTML = '<b>' + label + '</b><br><small style="opacity:.8">' + sub + '</small>';
-          x.onclick = function () { GFX.set(mode); renderPhone(); if (typeof toast === 'function') toast(mode === 'hd' ? '✨ Улучшенная графика включена' : '🎞️ Классическая графика включена'); };
-          return x;
-        }
-        row.appendChild(modeBtn('🎞️ Классическая', 'Как раньше. Быстро на любых устройствах.', 'classic'));
-        row.appendChild(modeBtn('✨ Улучшенная', 'Настраиваемая: свет, текстуры, вода, экран.', 'hd'));
-        box.appendChild(row);
-        if (GFX.mode === 'hd') {
-          function tog(label, sub, key) {
-            var x = document.createElement('button'); x.className = 'pbtn' + (GFX.opt[key] ? ' main' : ''); x.style.cssText = 'margin-top:6px;width:100%;text-align:left;padding:9px 12px';
-            x.innerHTML = (GFX.opt[key] ? '✅ ' : '⬜ ') + '<b>' + label + '</b>' + (sub ? '<br><small style="opacity:.8">' + sub + '</small>' : '');
-            x.onclick = function () { GFX.setOpt(key, !GFX.opt[key]); renderPhone(); }; return x;
-          }
-          function slider(label, key, min, max, step, fmt) {
-            var wd = document.createElement('div'); wd.style.cssText = 'margin-top:10px';
-            var l = document.createElement('div'); l.style.cssText = 'display:flex;justify-content:space-between;font-weight:800;font-size:14px';
-            var nm = document.createElement('span'); nm.textContent = label; var val = document.createElement('span'); val.textContent = fmt(GFX.opt[key]); l.appendChild(nm); l.appendChild(val);
-            var r = document.createElement('input'); r.type = 'range'; r.min = min; r.max = max; r.step = step; r.value = GFX.opt[key]; r.style.cssText = 'width:100%;margin-top:4px';
-            r.oninput = function () { val.textContent = fmt(+r.value); GFX.setOpt(key, +r.value, true); };
-            r.onchange = function () { GFX.setOpt(key, +r.value); };
-            ['pointerdown', 'touchstart', 'mousedown', 'touchmove'].forEach(function (ev) { r.addEventListener(ev, function (e) { e.stopPropagation(); }, { passive: true }); });
-            wd.appendChild(l); wd.appendChild(r); return wd;
-          }
-          var pc = function (v) { return Math.round(v * 100) + '%'; };
-          box.appendChild(H({ t: '🗺️ Карта и объекты' }));
-          box.appendChild(tog('Текстуры карты', 'Зернистость и детали на земле, стенах, дорогах.', 'texMap'));
-          box.appendChild(tog('Вода и отражения', 'Волны, отражение неба, блики солнца.', 'water'));
-          box.appendChild(H({ t: '🔘 Интерфейс' }));
-          box.appendChild(tog('Текстуры кнопок и панелей', 'Стеклянные панели, объёмные кнопки, мягкие тени.', 'texUI'));
-          box.appendChild(H({ t: '💡 Свет' }));
-          box.appendChild(tog('Тени от солнца', 'Заметно нагружает телефон.', 'shadows'));
-          if (GFX.opt.shadows) { var qn = ['Низкое', 'Среднее', 'Высокое']; var qb = document.createElement('button'); qb.className = 'pbtn'; qb.style.cssText = 'margin-top:6px;width:100%;text-align:left;padding:9px 12px'; qb.innerHTML = '🔲 Качество теней: <b>' + qn[GFX.opt.shadowQ] + '</b> (нажми, чтобы сменить)'; qb.onclick = function () { GFX.setOpt('shadowQ', (GFX.opt.shadowQ + 1) % 3); renderPhone(); }; box.appendChild(qb); }
-          box.appendChild(tog('Кинематографичная тонировка', 'Мягкие света и глубокие тени.', 'tone'));
-          box.appendChild(H({ t: '✨ Эффекты' }));
-          box.appendChild(tog('Частицы и эффекты', 'Больше дыма и пыли, лёгкая пыльца в воздухе.', 'fx'));
-          box.appendChild(H({ t: '🎥 Обзор и камера' }));
-          box.appendChild(slider('🔭 Дальность прорисовки', 'dist', .7, 1.8, .05, pc));
-          box.appendChild(slider('📷 Отдаление камеры', 'cam', .7, 2, .05, pc));
-          box.appendChild(slider('🖼️ Разрешение картинки', 'res', .5, 1, .05, pc));
-          box.appendChild(H({ t: '🖥️ Экран' }));
-          box.appendChild(slider('🌗 Гамма', 'gamma', .7, 1.5, .02, function (v) { return v.toFixed(2); }));
-          box.appendChild(slider('☀️ Яркость', 'bright', .7, 1.4, .02, pc));
-          box.appendChild(slider('🎨 Насыщенность', 'sat', .5, 1.6, .02, pc));
-          if (!gammaSupported()) { var gn = document.createElement('div'); gn.style.cssText = 'opacity:.7;font-size:12px;margin-top:4px'; gn.textContent = 'На этом устройстве гамма эмулируется яркостью и контрастом.'; box.appendChild(gn); }
-          box.appendChild(tog('Показывать FPS', '', 'fps'));
-          var au = document.createElement('button'); au.className = 'pbtn'; au.style.cssText = 'margin-top:6px;width:100%;text-align:left;padding:9px 12px';
-          au.textContent = (GFX.auto ? '✅' : '⬜') + ' Авто-снижение качества, если лагает' + (GFX.tier ? ' (сейчас уровень ' + GFX.tier + ')' : '');
-          au.onclick = function () { GFX.setAuto(!GFX.auto); if (GFX.auto) { GFX.tier = 0; applyTier(); } renderPhone(); };
-          box.appendChild(au);
-          var rs = document.createElement('button'); rs.className = 'pbtn'; rs.style.cssText = 'margin-top:6px;width:100%;padding:9px 12px'; rs.textContent = '↺ Сбросить улучшенную графику к рекомендуемой'; rs.onclick = function () { GFX.reset(); GFX.tier = 0; renderPhone(); }; box.appendChild(rs);
-        }
-        var first = b.querySelector('h2'); if (first && first.nextSibling) b.insertBefore(box, first.nextSibling); else b.appendChild(box);
-      } catch (e) { console.error('[MG_GFX settings]', e); }
-    };
-    w.__mgGfx = true; window.renderPhone = renderPhone = w; return true;
-  }
-  var t2 = setInterval(function () { if (ready() && hookSettings()) clearInterval(t2); }, 200);
+  // Меню настроек графики теперь общее для всей игры: см. v112-settings.js (использует MG_GFX.setOpt / MG_GFX.set).
+  GFX.defaults = DEF;
 })();
