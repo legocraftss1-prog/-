@@ -10,7 +10,8 @@
       if (!level || this.running) return;
       this.running = true; this.current = id;
       try {
-        if (typeof start === 'function' && typeof freshSave === 'function') start(freshSave());
+        // Сюжетная глава не должна вызывать start(freshSave()):
+        // это перезаписывает/сбрасывает обычное сохранение основной игры.
         Promise.resolve().then(function () { return level.start(); }).catch(function (e) {
           console.error('[MG_STORY] Ошибка сюжетки ' + id, e);
           self.running = false; toast('Не удалось запустить сюжетку. Подробности — в консоли.', 4000);
@@ -30,7 +31,7 @@
     var b = document.createElement('button');
     b.id = 'mg-story-entry';
     b.type = 'button';
-    b.textContent = '📖 СЮЖЕТКИ';
+    b.textContent = '📖 ПРОДОЛЖИТЬ ИСТОРИЮ';
     b.style.cssText = 'display:block;width:min(440px,90vw);margin:12px auto 0;padding:14px 18px;border:2px solid #f0c45b;border-radius:14px;background:#26385d;color:#fff;font:900 18px Rubik,Arial,sans-serif;cursor:pointer;';
     b.addEventListener('click', function () {
       if (T.running) return;
@@ -38,8 +39,8 @@
       panel.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(8,13,25,.88);display:flex;align-items:center;justify-content:center;padding:18px;';
       var card = document.createElement('div');
       card.style.cssText = 'width:min(460px,100%);max-height:85vh;overflow:auto;background:#202d49;color:#fff;border:2px solid #e9bd58;border-radius:20px;padding:22px;box-sizing:border-box;font:600 16px Rubik,Arial,sans-serif;';
-      var h = document.createElement('h2'); h.textContent = '📖 Сюжетки'; h.style.marginTop = '0'; card.appendChild(h);
-      var p = document.createElement('p'); p.textContent = 'Отдельные истории МГИАГ. Прогресс сюжеток хранится отдельно от обычного сохранения.'; card.appendChild(p);
+      var h = document.createElement('h2'); h.textContent = '📖 История МГИАГ'; h.style.marginTop = '0'; card.appendChild(h);
+      var p = document.createElement('p'); p.textContent = 'Главы истории МГИАГ. Запуск главы больше не сбрасывает обычное сохранение.'; card.appendChild(p);
       Object.keys(T.levels).sort(function (a,b) { return Number(a)-Number(b); }).forEach(function (id) {
         var def = T.levels[id], row = document.createElement('button');
         row.type = 'button'; row.textContent = '▶ Сюжетка №' + id + ' — ' + (def.title || 'Без названия');

@@ -5,7 +5,7 @@
   if (!T || !D || !D.Kit) { console.error('[LEVEL1] Не найден каркас сюжеток или Kit районов.'); return; }
 
   var L = { title: '5 000 000 баллов Максима', phase: 'home', picked: 0, holeSeen: false, holeBig: false, cart: null, areas: {} };
-  var HOME = null, STREET = null, STORE = null;
+  var HOME = null, STREET = null, STORE = null, MAXIM = null;
   var offset = -900;
 
   function areaKit(id) {
@@ -50,7 +50,12 @@
     STREET.tree(-15, 12, 'round', .8); STREET.tree(15, -14, 'round', .8);
     STREET.disc(2.4, 0x171923, -5.5, -7, .07, 36);
     STREET.disc(1.8, 0x080a10, -5.5, -7, .08, 36);
-    STREET.sign('ПЕРЕКРЁСТОК', 7, .8, 0, 4.5, -47, 0, '#37445a', '#ffffff');
+    STREET.sign('ПЕРЕКРЁСТОК', 7, .8, 0, 4.5, -47, 0, '#24764b', '#ffffff');
+    // Входная группа магазина: две стойки и козырёк оставляют проход посередине.
+    STREET.b(1.1, 4.2, 1.0, 0x3d654b, -2.9, 0, -43.5);
+    STREET.b(1.1, 4.2, 1.0, 0x3d654b, 2.9, 0, -43.5);
+    STREET.b(6.9, .65, 1.2, 0x24764b, 0, 4.0, -43.5);
+    STREET.sign('ВХОД', 2.2, .65, 0, 2.6, -43.95, 0, '#17452d', '#ffffff');
     interact(STREET, -5.5, -7, '🕳️ Осмотреть дыру', async function () {
       if (L.phase === 'street_end') { await growHole(); return; }
       if (L.holeSeen) { toast('Дыра всё ещё здесь.'); return; }
@@ -58,7 +63,7 @@
       await line([['gus','Э-э… А это что?'],['marya','Яма. Наверное, дорожники опять что-то раскопали.'],['gus','Но там темно. Очень темно.'],['marya','Не трогай. Нам в магазин надо.']]);
       toast('Ты заметил странную дыру.');
     });
-    interact(STREET, 0, -39, '🏪 Идти в магазин', async function () {
+    interact(STREET, 0, -43, '🚪 Войти в Перекрёсток', async function () {
       if (L.phase !== 'street') return;
       if (!L.holeSeen) { await line([['sys','По пути стоит осмотреть странное место у дороги.']]); return; }
       await line([['marya','Ладно, пошли за покупками.']]);
@@ -80,10 +85,20 @@
     STORE.b(7, 1.1, 2.8, 0x555a61, 0, .55, 12);
     STORE.sign('КАССА', 4, .7, 0, 2.2, 10.5, 0, '#3e4652', '#ffffff');
     L.cart = STORE.b(1.6, .5, 2.2, 0xb5b9bd, 5, .25, 16);
-    interact(STORE, -13, -1, '🥫 Взять продукты', function () { pickItem('🥫 Консервы'); });
-    interact(STORE, 0, -1, '🍞 Взять хлеб', function () { pickItem('🍞 Хлеб'); });
-    interact(STORE, 13, -1, '🥛 Взять молоко', function () { pickItem('🥛 Молоко'); });
-    interact(STORE, 0, 13, '🛒 Подойти к кассе', checkout);
+    interact(STORE, -13, -2.5, '🥫 Взять продукты', function () { pickItem('🥫 Консервы'); });
+    interact(STORE, 0, -2.5, '🍞 Взять хлеб', function () { pickItem('🍞 Хлеб'); });
+    interact(STORE, 13, -2.5, '🥛 Взять молоко', function () { pickItem('🥛 Молоко'); });
+    // Максим — полноценная модель персонажа, а не только имя в диалоге.
+    if (typeof makePerson === 'function' && typeof makeActor === 'function') {
+      MAXIM = makeActor('p1_maxim', 'Максим', makePerson({
+        skin: 0xe6b994, top: 0x3569a8, pants: 0x292d36,
+        shoes: 0x17191d, hair: 0x3a2a20, hairStyle: 'short', wide: .52
+      }), 'story');
+      STORE.g.add(MAXIM.g);
+      placeA(MAXIM, STORE.ox + 4.2, STORE.oz + 7.2, Math.PI);
+      MAXIM.g.visible = false;
+    }
+    interact(STORE, 0, 16, '🛒 Подойти к кассе', checkout);
   }
   function pickItem(name) {
     if (L.phase !== 'shop') return;
@@ -126,6 +141,7 @@
   function begin() {
     L.phase = 'home'; L.picked = 0; L.holeSeen = false; L.holeBig = false;
     buildHome(); buildStreet(); buildStore();
+    if (MAXIM) MAXIM.g.visible = false;
     move('p1_home', 0, 16);
     line([['marya','Так, нам нужно сходить в магазин.'],['gus','А что покупаем?'],['marya','Пока не знаю. Разберёмся на месте.']]);
   }
