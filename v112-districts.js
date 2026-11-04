@@ -19,7 +19,7 @@
   function Kit(id, ox, oz) {
     var g = new THREE.Group(); scene.add(g); g.visible = false; g.userData.area = id; camBlock[id] = camBlock[id] || [];
     var K = { g: g, ox: ox, oz: oz, id: id, anims: [] };
-    K.b = function (w, h, d, c, x, y, z, o) { return box(g, w, h, d, c, ox + x, y, oz + z, Object.assign({ cam: true }, o || {})); };
+    K.b = function (w, h, d, c, x, y, z, o) { return box(g, w, h, d, c, ox + x, y, oz + z, Object.assign({ cam: true, col: true }, o || {})); };
     K.bp = function (w, h, d, c, x, y, z) { return box(g, w, h, d, c, ox + x, y, oz + z, {}); };           // без коллизии и без блокировки камеры
     K.m = function (geo, c, s, p, r) { return M_(g, geo, c, s, [ox + p[0], p[1], oz + p[2]], r, false); };
     K.col = function (x0, x1, z0, z1, h) { var c = addCol(ox + x0, ox + x1, oz + z0, oz + z1); c.h = h || 3; return c; };

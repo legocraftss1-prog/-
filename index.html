@@ -295,7 +295,7 @@ body.busy #controls *{pointer-events:none}
   <h1>Марья,<br>Гусь<br>и абсурдный город</h1>
   <div class="tag">Обычный район. Обычные дворы. Над домом летит собака. Никто не реагирует.</div>
   <div class="bt"><button id="bPlay" disabled><span id="loading">Город загружается…</span></button><button id="bNew" class="alt hidden">Новая игра</button></div>
-  <div class="hint">VERSION 1.13 «Сюжетки» Левая часть экрана — ходить, правая — камера. ПК: WASD, Shift, E, Q, F, пробел — прыжок.</div>
+  <div class="hint">VERSION 1.13.2 · Продолжение основного сюжета Левая часть экрана — ходить, правая — камера. ПК: WASD, Shift, E, Q, F, пробел — прыжок.</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -4054,7 +4054,7 @@ renderPhone=function(){if(!['invites','settings','dev'].includes(phoneApp)){_ren
       rowBtn(b,'❌ Отказаться','','Нет',()=>{SKEV.state='none';notify('Отказ отправлен. Позовут в другой раз.','🛹');renderPhone();});}
     else if(SKEV.state==='accepted')line('⭐ Ты участвуешь: скейт-парк «Доска», сегодня с 18:00. Метка на карте.');
     else line('Новых приглашений нет. Они приходят, когда изучено 4+ трюка — не чаще раза в пару игровых дней.');}
-  if(phoneApp==='settings'){h.textContent='⚙️ Настройки · VERSION 1.13 «Сюжетки»';
+  if(phoneApp==='settings'){h.textContent='⚙️ Настройки · VERSION 1.13.2 · Продолжение основного сюжета';
     rowBtn(b,'🚪 Выйти в главное меню',COOP.on?(COOP.host?'прогресс сохранится у тебя':'прогресс сохранится у создателя комнаты'):'игра сохранится','Выйти',()=>exitToMenu());line('💾 Автосохранение: каждые 20 секунд и при сворачивании. Сохраняется всё: деньги, транспорт, позиции, трюки, бизнес, сюжет, вещи, мир.',15);
     if(S.savedAt)line('Последнее сохранение: '+new Date(S.savedAt).toLocaleTimeString('ru-RU'),15);
     rowBtn(b,'💾 Сохранить сейчас (слот '+SAVE_SLOT+')','','Сохранить',()=>{fullSave(true);renderPhone();});slotsPanel(b);
