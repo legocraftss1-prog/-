@@ -494,5 +494,5 @@
   var iv = setInterval(function () { try { install(); } catch (e) { console.error('[MG_DIST]', e); } if (installed) clearInterval(iv); }, 300);
   // стеклянный материал (общий)
   var _glass = null; Kit.glass = function () { return _glass = _glass || new THREE.MeshLambertMaterial({ color: 0xbfe4ee, transparent: true, opacity: .32 }); };
-  D.defs = DEFS; D.interiors = IN;
+  D.defs = DEFS; D.interiors = IN; D.Kit = Kit; D.rngf = rngf;
 })();
