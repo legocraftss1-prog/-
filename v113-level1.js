@@ -376,7 +376,7 @@
       var dsp = K0.npc('s1_stranger', 'Незнакомый мужчина', { top: 0x6a6a7a, pants: 0x2a2a2a, hair: 0x2a2a2a, hairStyle: 'short', skin: 0xd8a888, scale: 1.05 }, 8, 25.5, PI);
       K.maxim = mx; K.stranger = dsp; mx.hidden = false;
       await T.shotTo('p1_store', 0, 3.2, 14, 0, 1.6, 22, 900);
-      await walkTo(mx, sx(0), sz(19.5), 4.2);
+      await walkToSafe(mx, sx(0), sz(19.5), 4.2);
       await say([['ex', 'НАКОНЕЦ ТО Я ПРИШЕЛ ТРАТИТЬ СВОИ БАЛЛЫ!']]);
       await say([['gus', '*шёпотом* Максим. Вот сейчас будет весело.'], ['marya', '*шёпотом* Молчи и не дыши.']]);
       // Максим собирает тележку
@@ -384,18 +384,18 @@
       var cart = new THREE.Group(); cart.position.set(sx(-14), 0, sz(-1)); K0.g.add(cart); var cb = new THREE.Mesh(new THREE.BoxGeometry(1.6, .9, 2.6), new THREE.MeshLambertMaterial({ color: 0xb8bec6 })); cb.position.y = .9; cart.add(cb);
       var pile = []; ['🍞', '🥩', '🧀', '🍾', '🍌', '🧻', '🥫', '🍕', '🍫', '🥛', '🧴', '🍉'].forEach(function (e, i) { var sp = emojiSprite(e, .9); sp.position.set(-.5 + (i % 3) * .5, 1.6 + Math.floor(i / 3) * .3, -.9 + (i % 4) * .6); cart.add(sp); pile.push(sp); });
       var route = [[-14, -3], [-14, -16], [-2, -14.5], [12, -14.5], [12, -2], [0, 5], [-8, 8]];
-      for (var r = 0; r < route.length; r++) { await walkTo(mx, sx(route[r][0]), sz(route[r][1]), 4); cart.position.set(mx.pos.x - Math.sin(mx.yaw) * 1.8, 0, mx.pos.z - Math.cos(mx.yaw) * 1.8); cart.rotation.y = mx.yaw; for (var e = 0; e < 3; e++) { var sp2 = emojiSprite(['🥩', '🍫', '🧃', '🍖', '🧀'][(r + e) % 5], .8); sp2.position.set(Math.random() - .5, 1.9 + r * .12, Math.random() * 2 - 1); cart.add(sp2); } }
+      for (var r = 0; r < route.length; r++) { await walkToSafe(mx, sx(route[r][0]), sz(route[r][1]), 4); cart.position.set(mx.pos.x - Math.sin(mx.yaw) * 1.8, 0, mx.pos.z - Math.cos(mx.yaw) * 1.8); cart.rotation.y = mx.yaw; for (var e = 0; e < 3; e++) { var sp2 = emojiSprite(['🥩', '🍫', '🧃', '🍖', '🧀'][(r + e) % 5], .8); sp2.position.set(Math.random() - .5, 1.9 + r * .12, Math.random() * 2 - 1); cart.add(sp2); } }
       await T.shotOff(600);
-      cart.position.set(sx(0), 0, sz(8.8)); await walkTo(mx, sx(0), sz(8.2), 3);
+      cart.position.set(sx(0), 0, sz(8.8)); await walkToSafe(mx, sx(0), sz(8.2), 3);
       await say([['sys', 'Тележка Максима: 412 позиций. Некоторые — спорные.']]);
       // к кассе подходит незнакомец с жвачкой
       await T.shotTo('p1_store', 7, 4.2, 4, 0, 1.4, 11, 800);
-      await walkTo(dsp, sx(2.2), sz(9.4), 3.2); K0.emoji && 0;
+      await walkToSafe(dsp, sx(2.2), sz(9.4), 3.2); K0.emoji && 0;
       var gum = emojiSprite('🍬', .8); gum.position.set(0, 2.2, 0); dsp.g.add(gum);
       await say([['cash', 'Здравствуйте! Начнём с тележки. Карта лояльности?'], ['ex', 'Конечно! Максим Н. Все пять миллионов — на эту тележку!']]);
       sfx('click'); await wait(800); sfx('ding');
       await say([['cash', 'Сканирую… Баланс: ноль баллов.'], ['ex', '…'], ['ex', 'Как — НОЛЬ?!'], ['cash', 'Ноль баллов. Потрачены на сыр в форме вас.'], ['ex', 'НА ЧТО?!'], ['man', 'Эм… я только жвачку. Можно пробить?'], ['ex', '*дрожащим голосом* Да-да. Проходите. Я… пропущу вас. Мне теперь некуда торопиться.']]);
-      await walkTo(dsp, sx(0), sz(10.6), 2.5);
+      await walkToSafe(dsp, sx(0), sz(10.6), 2.5);
       sfx('click'); await wait(700);
       await T.shotOff(300); await T.shotTo('p1_store', 3, 3.4, 15.5, 0, 1.7, 9.6, 700);
       T.confetti(K0, 0, 3.2, 9.6, 40); sfx('win');
@@ -408,7 +408,7 @@
       await spit(dsp, mx, K0);
       await wait(900);
       await say([['ex', '…']]);
-      await walkTo(dsp, sx(6), sz(20), 3); await T.shotOff(700);
+      await walkToSafe(dsp, sx(6), sz(20), 3); await T.shotOff(700);
       // финал сцены
       await say([['cash', 'Следующий. Ой. Максим. Ваши баллы закончились. Ваша тележка — осталась. Ваш чек — на три метра.'], ['ex', 'Я… я пришёл потратить баллы. Я месяц копил. Это были мои — баллы. Мои.'], ['gus', '*шёпотом* Может, признаться?'], ['marya', '*шёпотом* Гусь. Он плюнут на голову. Ему и так плохо. Не добивай.']]);
       await say([['cash', 'Тележку, пожалуйста, сдайте на склад. Или оставьте себе. Мы не хотим это забирать.'], ['ex', '…Это же сыр на голове? Или плевок?'], ['guard', 'Приятного дня.'], ['ex', '*сидя на полу* Спасибо.']]);
@@ -424,6 +424,23 @@
     });
     Q().stage = 3; complete('points'); holeState(); persist(); toast('✔ Дело закрыто: 5 000 000 баллов Максима', 4200);
   }
+  // Защита финальной сцены от зависания, если NPC не обновляется игровым циклом.
+  // В таком случае персонаж аккуратно доводится до точки назначения, а кат-сцена продолжается.
+  async function walkToSafe(actor, x, z, speed, maxMs) {
+    var distance = Math.hypot(x - actor.pos.x, z - actor.pos.z);
+    var limit = maxMs || Math.min(12000, Math.max(4500, distance / (speed || 3) * 1000 + 3500));
+    var completed = false;
+    await Promise.race([
+      walkTo(actor, x, z, speed).then(function () { completed = true; }),
+      new Promise(function (resolve) { setTimeout(resolve, limit); })
+    ]);
+    if (!completed) {
+      placeA(actor, x, z, actor.yaw);
+      actor.moving = false;
+      actor.run = false;
+    }
+  }
+
   async function spit(from, to, K0) {
     var s = emojiSprite('💦', .7); s.position.set(from.pos.x, 1.7, from.pos.z); K0.g.add(s);
     var t0 = performance.now(), T_ = 550, a = { x: from.pos.x, y: 1.7, z: from.pos.z }, b = { x: to.pos.x, y: 1.95, z: to.pos.z };
