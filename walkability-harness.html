@@ -1,0 +1,37 @@
+<!doctype html><html><body><div id="menu"></div><div id="fade" style="opacity:0"></div><div id="sheetBody"></div><div id="sheetFoot"></div><script>
+function mk(){const t={};return new Proxy(function(){},{get:(o,k)=>{if(k==='then'||typeof k==='symbol')return undefined;if(k in t)return t[k];if(['position','rotation','scale','material','geometry','children','color'].includes(k))return t[k]=mk();return(...a)=>mk();},set:(o,k,v)=>{t[k]=v;return true;},apply:()=>mk(),construct:()=>mk()});}
+window.THREE=new Proxy({},{get:(_,k)=>function(){return mk();}});window.$=id=>document.getElementById(id);
+var COLS=[],stats={actors:0};
+var worldReady=true,area='city',BA='city',started=true;
+var FLX=-1200,FLZ=200,FLAT_DOOR={x:186,z:-11.6};
+var cam={yaw:0,pitch:.36,force:null},camera=mk(),rc={set(){},far:0,intersectObjects(){return window.__block?[{distance:1}]:[];}};
+var player={id:'marya',name:'Марья',pos:{x:0,y:0,z:0},feet:0,yaw:0,drive:null,g:{position:{},rotation:{},visible:true,add(){},remove(){}},hp:100,lock:false,vx:0,vz:0};
+var marya=player,gus={id:'gus'};
+var comp={id:'gus',name:'Гусь',pos:{x:0,y:0,z:0},yaw:0,hidden:false,g:{visible:true,add(){},remove(){}}};
+var actors=[],inters=[],camBlock={city:[]},cityG=mk(),scene=mk(),toasts=[],keys={},joy={x:0,y:0},runHeld=false;
+function toast(t){toasts.push(t);}function sfx(){}function H(){return 0;}
+function box(g,w,h,d,c,x,y,z,o){if(o&&o.col){COLS.push({t:'r',x0:x-w/2,x1:x+w/2,z0:z-d/2,z1:z+d/2,h:y+h,on:true,area:BA,src:'box'});}if(o&&o.cam)(camBlock[BA]=camBlock[BA]||[]).push(1);return mk();}
+function M_(){return mk();}function sign(){return mk();}
+function addCol(x0,x1,z0,z1){const c={t:'r',x0:Math.min(x0,x1),x1:Math.max(x0,x1),z0:Math.min(z0,z1),z1:Math.max(z0,z1),on:true,area:BA,h:3};COLS.push(c);return c;}
+function addColC(cx,cz,rad,h){const c={t:'c',cx,cz,r:rad,on:true,area:BA,h:h===undefined?3:h};COLS.push(c);return c;}
+var G={box:1,cyl:2,cone:3,sph:4,hemi:5};function mat(c){return {color:c};}
+function emojiSprite(){return mk();}function canvasTex(){return mk();}
+function makePerson(o){return {g:mk(),P:{},o};}
+function makeActor(id,n,m,a){stats.actors++;const o={id,name:n,g:m.g,pos:{x:0,y:0,z:0},yaw:0,area:a};actors.push(o);return o;}
+function placeA(a,x,z,yaw){a.pos.x=x;a.pos.z=z;if(yaw!==undefined)a.yaw=yaw;}
+function walkTo(a,x,z){a.pos.x=x;a.pos.z=z;return Promise.resolve();}
+function addI(o){inters.push(o);return o;}function setArea(a){area=a;}
+async function cutscene(fn){await fn();}function fade(){return Promise.resolve();}const wait=()=>new Promise(r=>setTimeout(r,1));
+function showComp(x,z){comp.hidden=false;comp.pos.x=x;comp.pos.z=z;}function dismount(){}function collide(){}function fullSave(){}function saveGame(){}function blocked(){return false;}
+var S={q:{},money:{},invs:{marya:[],gus:[]},p13:null};const ITEMS={};const EATL={};const WHO={};
+function invOf(){return S.invs.marya;}function addItem(k){invOf().push(k);}
+const MAIN=[];function complete(id){S.q[id]=true;(window.__done=window.__done||[]).push(id);}
+function say(l){(window.__spoke=window.__spoke||[]).push(...l);return Promise.resolve();}
+window.__ask=[];function ask(){return Promise.resolve(window.__ask.length?window.__ask.shift():0);}
+function timing(){return Promise.resolve(3);}function banner(a,b){toasts.push('B:'+a);}function fmt(n){return n;}
+function rowBtn(){}function closeModal(){}function openModal(){}
+function objective(){return {t:'main'};}function updCamera(){}function renderPhone(){}
+function updEnv(){}function updPlayer(){}function start(sv){}function slotKey(n){return 's'+n}var SAVE_SLOT=1;
+window.MG_BIZ={menu(){} ,S12(){return {};}};
+</script>
+<script src="../proj/v112-districts.js"></script><script src="../proj/v113-story.js"></script><script src="../proj/v113-level1.js"></script><script src="../proj/v113-level3.js"></script></body></html>

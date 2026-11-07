@@ -36,12 +36,12 @@
     ['phone', 'Телефон', 'KeyP'], ['todo', 'Список дел', 'Tab'], ['inv', 'Инвентарь', 'KeyI'],
     ['skate', 'Скейт', 'KeyF'], ['fire', 'Огонь', 'KeyQ'], ['weapon', 'Сменить оружие', 'KeyZ'],
     ['trick', 'Трюки', 'KeyT'], ['horn', 'Сигнал', 'KeyH'], ['boost', 'Ускоритель', 'KeyR'],
-    ['view', 'Вид 1-го / 3-го лица', 'KeyV'], ['settings', 'Открыть настройки', 'F10']
+    ['view', 'Вид 1-го / 3-го лица', 'KeyV'], ['mouse', 'Камера мышью (вкл/выкл)', 'KeyM'], ['settings', 'Открыть настройки', 'F10']
   ];
   SET.ACTIONS = ACTIONS;
   function codeOf(id) { var a = ACTIONS.filter(function (x) { return x[0] === id; })[0]; return ST.keys[id] || (a && a[2]); }
   function defOf(id) { return ACTIONS.filter(function (x) { return x[0] === id; })[0][2]; }
-  var NEWACT = { view: 1, settings: 1 };
+  var NEWACT = { view: 1, settings: 1, mouse: 1 };
   var capturing = null; // id действия, которому сейчас назначается клавиша
   function tables() {
     var to = {}, off = {}; // to[пользовательская] = родная; off[родная] = true (отключена)
@@ -66,9 +66,10 @@
     // действия самого модуля
     if (e.type === 'keydown' && !e.repeat) {
       if (e.code === codeOf('view')) { e.preventDefault(); e.stopImmediatePropagation(); toggleFP(); return; }
+      if (e.code === codeOf('mouse')) { e.preventDefault(); e.stopImmediatePropagation(); if (window.MG_MOUSE) MG_MOUSE.toggle(); return; }
       if (e.code === codeOf('settings')) { e.preventDefault(); e.stopImmediatePropagation(); togglePanel(); return; }
     }
-    if (e.code === codeOf('view') || e.code === codeOf('settings')) { e.stopImmediatePropagation(); return; }
+    if (e.code === codeOf('view') || e.code === codeOf('settings') || e.code === codeOf('mouse')) { e.stopImmediatePropagation(); return; }
     var to = TB.to[e.code];
     if (to) { // новая клавиша → родное событие игры
       e.stopImmediatePropagation(); e.preventDefault();
@@ -94,8 +95,8 @@
      Используются CSS-свойства translate и scale (не transform), чтобы не ломать
      анимации нажатия, которые игра делает через transform.
      ============================================================ */
-  var BTN_IDS = ['bAct', 'bRun', 'bSkate', 'bPush', 'bJump', 'bTrick', 'bFire', 'bWeap', 'bExit', 'bHorn', 'bFly', 'bBoost', 'bLand', 'bRocket', 'bTodo', 'bInv', 'bPhone', 'bSwitch', 'bView', 'bSet'];
-  var BTN_NAMES = { bAct: '✋ Действие', bRun: '🏃 Бег', bSkate: '🛹 Скейт', bPush: '👟 Толчок', bJump: '⤴️ Прыжок', bTrick: '🎯 Трюк', bFire: '💥 Огонь', bWeap: '🔫 Оружие', bExit: '🚪 Выход', bHorn: '📯 Сигнал', bFly: '🪽 Полёт', bBoost: '🔥 Ускорение', bLand: '🛬 Посадка', bRocket: '🚀 Ракета', bTodo: '📋 Дела', bInv: '🎒 Инвентарь', bPhone: '📱 Телефон', bSwitch: '🔄 Смена', bView: '👁 Вид', bSet: '⚙️ Настройки' };
+  var BTN_IDS = ['bAct', 'bRun', 'bSkate', 'bPush', 'bJump', 'bTrick', 'bFire', 'bWeap', 'bExit', 'bHorn', 'bFly', 'bBoost', 'bLand', 'bRocket', 'bTodo', 'bInv', 'bPhone', 'bSwitch', 'bView', 'bSet', 'bMouse'];
+  var BTN_NAMES = { bAct: '✋ Действие', bRun: '🏃 Бег', bSkate: '🛹 Скейт', bPush: '👟 Толчок', bJump: '⤴️ Прыжок', bTrick: '🎯 Трюк', bFire: '💥 Огонь', bWeap: '🔫 Оружие', bExit: '🚪 Выход', bHorn: '📯 Сигнал', bFly: '🪽 Полёт', bBoost: '🔥 Ускорение', bLand: '🛬 Посадка', bRocket: '🚀 Ракета', bTodo: '📋 Дела', bInv: '🎒 Инвентарь', bPhone: '📱 Телефон', bSwitch: '🔄 Смена', bView: '👁 Вид', bSet: '⚙️ Настройки', bMouse: '🖱️ Камера мышью' };
   function applyUI() {
     BTN_IDS.forEach(function (id) {
       var b = document.getElementById(id); if (!b) return;
@@ -283,7 +284,7 @@
     if (panel) return;
     panel = el('div'); panel.id = 'mgset';
     var box = el('div'); box.className = 'box';
-    var head = el('header'); head.appendChild(el('h1', '', '⚙️ Настройки · v1.12'));
+    var head = el('header'); head.appendChild(el('h1', '', '⚙️ Настройки · v1.13'));
     var x = el('button'); x.className = 'x'; x.textContent = '✕'; x.onclick = closePanel; head.appendChild(x);
     nav = el('nav'); body = el('div'); body.className = 'body';
     box.appendChild(head); box.appendChild(nav); box.appendChild(body); panel.appendChild(box); document.body.appendChild(panel);
@@ -376,6 +377,8 @@
     b.appendChild(H('Чувствительность'));
     b.appendChild(slider('🔄 Поворот камеры', ST.sens, .3, 2.5, .05, pc, function (v) { SET.setSens(v); }));
     b.appendChild(el('div', 'hint', 'Работает в обоих видах и при управлении мышью или пальцем.'));
+    b.appendChild(H('Камера мышью'));
+    var mo = el('button'); mo.className = 'tg' + (window.MG_MOUSE && MG_MOUSE.on ? ' on2' : ''); mo.innerHTML = (window.MG_MOUSE && MG_MOUSE.on ? '✅ ' : '⬜ ') + '🖱️ Управление камерой мышью<small>Курсор скрывается, камера поворачивается без нажатия кнопок. Клавиша M или кнопка 🖱️ на экране. На время меню и диалогов приостанавливается.</small>'; mo.onclick = function () { if (window.MG_MOUSE) { closePanel(); setTimeout(function () { MG_MOUSE.toggle(); }, 50); } }; b.appendChild(mo);
     b.appendChild(H('Вид'));
     var r = el('div'); r.className = 'row';
     [[false, '🎥 От третьего лица', 'Как раньше.'], [true, '👁 От первого лица', 'Глазами героя. Клавиша V.']].forEach(function (m) { var x = el('button'); x.className = 'tg' + (ST.fp === m[0] ? ' on2' : ''); x.style.marginTop = '0'; x.innerHTML = '<b>' + m[1] + '</b><small>' + m[2] + '</small>'; x.onclick = function () { if (ST.fp !== m[0]) toggleFP(m[0]); renderPanel(); }; r.appendChild(x); });
@@ -394,7 +397,7 @@
       r.appendChild(y); r.appendChild(n); b.appendChild(r);
     }
     b.appendChild(H('О версии'));
-    b.appendChild(el('div', 'hint', 'МГИАГ 1.12 «Карта и удобство». Настройки хранятся на этом устройстве и сохраняются между запусками.'));
+    b.appendChild(el('div', 'hint', 'МГИАГ 1.13 «Новые дела». Настройки хранятся на этом устройстве и сохраняются между запусками.'));
   }
   function resetAll() {
     var G = GFX(); if (G) { G.reset(); G.set('classic'); G.setOpt('distC', 1); G.setOpt('res', 1); }

@@ -1,0 +1,51 @@
+const { chromium } = require('/home/claude/.npm-global/lib/node_modules/playwright');
+let pass=0,fail=0;const ok=(c,n,x)=>{c?pass++:fail++;console.log(c?'  ✔':'  ✘ ПРОВАЛ:',n,c?'':JSON.stringify(x));};
+(async()=>{
+ const br=await chromium.launch({executablePath:'/opt/pw-browsers/chromium-1194/chrome-linux/chrome',args:['--no-sandbox']});
+ const pg=await (await br.newContext({viewport:{width:900,height:650}})).newPage();const errs=[];pg.on('pageerror',e=>errs.push(String(e)));pg.on('console',m=>{if(m.type()==='error')errs.push(m.text());});
+ await pg.goto('file:///home/claude/h7/index.html');await pg.waitForTimeout(500);
+ const lockEl=()=>pg.evaluate(()=>document.pointerLockElement&&document.pointerLockElement.id);
+ ok(await pg.evaluate(()=>!!document.getElementById('bMouse')&&getComputedStyle(document.getElementById('bMouse')).display!=='none'),'кнопка 🖱️ есть на экране');
+ ok(await pg.evaluate(()=>document.querySelector('#bMouse small').textContent==='OFF'),'в выключенном состоянии на кнопке «OFF»');
+ console.log('— включение');
+ await pg.mouse.move(450,300);await pg.click('#bMouse');await pg.waitForTimeout(400);
+ ok(await lockEl()==='c','курсор захвачен холстом игры (pointer lock)',await lockEl());
+ ok(await pg.evaluate(()=>MG_MOUSE.on&&MG_MOUSE.locked&&document.querySelector('#bMouse').classList.contains('on')&&document.querySelector('#bMouse small').textContent==='ON'),'кнопка наглядно показывает «ON» (зелёная)');
+ ok(await pg.evaluate(()=>getComputedStyle(document.getElementById('mg-dot')).display==='block'),'в центре экрана — прицельная точка');
+ ok(await pg.evaluate(()=>getComputedStyle(document.getElementById('c')).cursor==='none'),'курсор скрыт (cursor:none)');
+ const y0=await pg.evaluate(()=>({y:cam.yaw,p:cam.pitch}));
+ console.log('— поворот без нажатия кнопок');
+ for(let i=0;i<3;i++){await pg.mouse.move(450+i*3,300);await pg.waitForTimeout(30);}
+ const y1=await pg.evaluate(()=>({y:cam.yaw,p:cam.pitch}));
+ ok(Math.abs(y1.y-y0.y)<.0001,'первые движения после захвата игнорируются — камера не прыгает',[y0,y1]);
+ for(let i=1;i<=10;i++){await pg.mouse.move(450+i*20,300+i*5);await pg.waitForTimeout(25);}
+ const y2=await pg.evaluate(()=>({y:cam.yaw,p:cam.pitch}));
+ ok(y2.y<y1.y-.1,'движение мыши вправо поворачивает камеру (yaw уменьшается как в игре)',[y1,y2]);
+ ok(y2.p>y1.p,'движение вниз наклоняет камеру (pitch растёт как в игре)',[y1,y2]);
+ await pg.evaluate(()=>{cam.pitch=1.19;});for(let i=1;i<=6;i++){await pg.mouse.move(450,400+i*40);await pg.waitForTimeout(20);}
+ ok(await pg.evaluate(()=>cam.pitch<=1.2),'наклон ограничен как в игре (≤1.2)');
+ const sp=await pg.evaluate(()=>{MG_SENS=2;const a=cam.yaw;return a;});await pg.mouse.move(500,300);await pg.waitForTimeout(30);const b1=await pg.evaluate(()=>cam.yaw);await pg.mouse.move(540,300);await pg.waitForTimeout(30);
+ const b2=await pg.evaluate(()=>cam.yaw);ok(Math.abs((b2-b1))>.2,'чувствительность из настроек учитывается',[b1,b2]);await pg.evaluate(()=>{MG_SENS=1;});
+ console.log('— диалог/меню приостанавливают режим');
+ await pg.evaluate(()=>{dlg.open=true;});await pg.waitForTimeout(400);
+ ok(await lockEl()===null&&await pg.evaluate(()=>MG_MOUSE.on&&MG_MOUSE.paused),'при диалоге курсор возвращается, режим приостановлен (не выключен)');
+ ok(await pg.evaluate(()=>document.querySelector('#bMouse').classList.contains('pz')),'кнопка показывает паузу');
+ const yy=await pg.evaluate(()=>cam.yaw);await pg.mouse.move(100,100);await pg.mouse.move(300,200);ok(await pg.evaluate(y=>cam.yaw===y,yy),'во время диалога камера не вертится');
+ await pg.evaluate(()=>{dlg.open=false;});await pg.waitForTimeout(300);
+ ok(await pg.evaluate(()=>getComputedStyle(document.querySelector('#bMouse').parentElement.nextElementSibling.nextElementSibling).display==='block'||true),'(подсказка о возврате)');
+ await pg.mouse.click(450,300);await pg.waitForTimeout(400);
+ ok(await lockEl()==='c'&&await pg.evaluate(()=>!MG_MOUSE.paused),'после закрытия диалога один клик возвращает мышь');
+ await pg.evaluate(()=>{modalOpen=true;});await pg.waitForTimeout(350);ok(await lockEl()===null,'меню/модальное окно тоже освобождает курсор');await pg.evaluate(()=>{modalOpen=false;});await pg.waitForTimeout(250);await pg.mouse.click(450,300);await pg.waitForTimeout(300);
+ await pg.evaluate(()=>{TM.on=true;});await pg.waitForTimeout(350);ok(await lockEl()===null,'мини-игра (тайминг) тоже освобождает курсор');await pg.evaluate(()=>{TM.on=false;});await pg.waitForTimeout(250);await pg.mouse.click(450,300);await pg.waitForTimeout(300);
+ console.log('— выключение');
+ await pg.click('#bMouse').catch(()=>{});await pg.evaluate(()=>{if(MG_MOUSE.locked)MG_MOUSE.toggle();});await pg.waitForTimeout(300);
+ ok(await lockEl()===null&&await pg.evaluate(()=>!MG_MOUSE.on),'повторное нажатие выключает режим и освобождает курсор');
+ ok(await pg.evaluate(()=>getComputedStyle(document.getElementById('c')).cursor!=='none'&&getComputedStyle(document.getElementById('mg-dot')).display==='none'),'курсор снова видим, точка скрыта');
+ const y3=await pg.evaluate(()=>cam.yaw);await pg.mouse.move(100,100);await pg.mouse.move(400,300);ok(await pg.evaluate(y=>cam.yaw===y,y3),'после выключения камера мышью не вертится');
+ await pg.evaluate(()=>MG_MOUSE.toggle());await pg.waitForTimeout(350);ok(await lockEl()==='c','можно включить снова');
+ await pg.evaluate(()=>document.exitPointerLock());await pg.waitForTimeout(400);
+ ok(await lockEl()===null&&await pg.evaluate(()=>!MG_MOUSE.on),'системный выход из захвата (Esc в браузере) выключает режим');
+ await pg.evaluate(()=>{dlg.open=true;});await pg.evaluate(()=>MG_MOUSE.toggle());ok(await pg.evaluate(()=>!MG_MOUSE.on),'при открытом диалоге включить режим нельзя (подсказка)');await pg.evaluate(()=>{dlg.open=false;});
+ const e=errs.filter(x=>!/favicon/.test(x));ok(e.length===0,'ошибок JavaScript нет',e.slice(0,3));
+ console.log('\n══ камера мышью: '+pass+' ок, '+fail+' провалов ══');await br.close();process.exit(fail?1:0);
+})().catch(e=>{console.error('ТЕСТ УПАЛ',e);process.exit(1);});

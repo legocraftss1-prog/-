@@ -1,0 +1,38 @@
+<!doctype html><html><body><div id="menu"></div><div id="fade" style="opacity:0"></div><div id="sheetBody"></div><div id="sheetFoot"></div><script>
+function mk(){const t={};return new Proxy(function(){},{get:(o,k)=>{if(k==='then'||typeof k==='symbol')return undefined;if(k in t)return t[k];if(['position','rotation','scale','material','geometry','children','color'].includes(k))return t[k]=mk();return(...a)=>mk();},set:(o,k,v)=>{t[k]=v;return true;},apply:()=>mk(),construct:()=>mk()});}
+function mkObj(){const o={visible:true,userData:{},children:[],position:{x:0,y:0,z:0,set(x,y,z){this.x=x;this.y=y;this.z=z;return this;}},rotation:{x:0,y:0,z:0,set(){}},scale:{x:1,y:1,z:1,set(x,y,z){this.x=x;this.y=y;this.z=z;},setScalar(v){this.x=this.y=this.z=v;}},material:{color:{setHex(){},set(){}},opacity:1,map:null,needsUpdate:false},geometry:{dispose(){}},add(c){this.children.push(c);},remove(){}};return o;}
+window.THREE=new Proxy({},{get:(_,k)=>(['Group','Mesh','Sprite'].includes(k)?function(){return mkObj();}:function(){return mk();})});
+window.$=id=>document.getElementById(id);
+var stats={box:0,M:0,sign:0,cols:0,actors:0,spr:0};
+var worldReady=true,area='city',BA='city',started=true,SAVE_MODE='solo',SAVE_SLOT=1,FLX=-1200,FLZ=200,FLAT_DOOR={x:186,z:-11.6};
+var cam={yaw:0,pitch:.36,force:null},camera=mk(),rc={set(){},far:0,intersectObjects(){return window.__block?[{distance:1}]:[];}};
+var player={id:'marya',name:'Марья',pos:{x:0,y:0,z:0},feet:0,yaw:0,drive:null,g:{position:{},rotation:{},visible:true,add(){},remove(){}},hp:100,lock:false,vx:0,vz:0};
+var comp={id:'gus',name:'Гусь',pos:{x:0,y:0,z:0},yaw:0,hidden:false,g:{visible:true,add(){},remove(){}}};
+var actors=[],inters=[],camBlock={city:[]},cityG=mk(),scene=mk(),toasts=[],keys={},joy={x:0,y:0},runHeld=false;
+function toast(t){toasts.push(t);}function sfx(){}function H(){return 0;}
+function box(g,w,h,d,c,x,y,z,o){stats.box++;if(o&&o.cam)(camBlock[BA]=camBlock[BA]||[]).push(1);return mk();}
+function M_(){stats.M++;return mk();}function sign(){stats.sign++;return mk();}
+function addCol(x0,x1,z0,z1){stats.cols++;return {on:true,x0,x1,z0,z1};}function addColC(){stats.cols++;return {on:true};}
+var G={box:1,cyl:2,cone:3,sph:4,hemi:5};function mat(c){return {color:c};}
+function emojiSprite(){stats.spr++;return mkObj();}function canvasTex(w,h,f){return mk();}
+function makePerson(o){return {g:mk(),P:{},o};}
+function makeActor(id,n,m,a){stats.actors++;const o={id,name:n,g:m.g,pos:{x:0,y:0,z:0},yaw:0,area:a,target:null,tspeed:2,moving:false};actors.push(o);return o;}
+function placeA(a,x,z,yaw){a.pos.x=x;a.pos.z=z;if(yaw!==undefined)a.yaw=yaw;a.target=null;}
+function walkTo(a,x,z,sp){a.pos.x=x;a.pos.z=z;a.target=null;return Promise.resolve();}
+function addI(o){inters.push(o);return o;}function setArea(a){area=a;}
+async function cutscene(fn){await fn();}function fade(){return Promise.resolve();}const wait=()=>new Promise(r=>setTimeout(r,2));
+function showComp(x,z){comp.hidden=false;comp.pos.x=x;comp.pos.z=z;}function dismount(){}function collide(){}function fullSave(){}function saveGame(){}function blocked(){return false;}
+var S={q:{ufo:true},money:{marya:1,gus:1},invs:{marya:[],gus:[]},p13:null};const MAIN=[{id:'ufo'}];window.__done=[];function complete(id){S.q[id]=true;window.__done.push(id);}const ITEMS={};const EATL={};
+function invOf(){return S.invs.marya;}function addItem(k){invOf().push(k);}function removeItem(){}function money(){return 1}function addMoney(){}function spend(){return true;}
+const WHO={};const spoke=[];function say(l){l.forEach(x=>spoke.push(x));return Promise.resolve();}
+window.__ask=[];function ask(w,t,o){return Promise.resolve(window.__ask.length?window.__ask.shift():0);}
+function timing(){return Promise.resolve(3);}function banner(a,b){toasts.push('B:'+a);}function fmt(n){return n;}
+function rowBtn(b,label,sub,btn,fn,dis){const d=document.createElement('div');d.dataset.l=label;d.dataset.dis=dis?1:0;d._fn=fn;b.appendChild(d);}
+function closeModal(){}function openModal(){}function start(sv){}function slotKey(n){return 's'+n}
+function objective(){return {t:'main'};}function updCamera(){}function renderPhone(){}function exitToMenu(){}
+function updEnv(dt){actors.forEach(a=>{if(a.target){const dx=a.target.x-a.pos.x,dz=a.target.z-a.pos.z,d=Math.hypot(dx,dz);if(d>.05){const s=Math.min(d,(a.tspeed||2)*dt);a.pos.x+=dx/d*s;a.pos.z+=dz/d*s;a.yaw=Math.atan2(dx,dz);a.moving=true;}else a.moving=false;}});}
+function updPlayer(){}function setTitle(){}
+addI({area:'flat',p:{x:FLX-1.4,z:FLZ+2},r:1.4,label:'📦 Коробки с вещами',act(){window.__boxes=(window.__boxes||0)+1;}});
+window.MG_BIZ={menu(title,fill){const b=document.getElementById('sheetBody');b.innerHTML='';fill(b,()=>{});window.__menuTitle=title;}};
+</script><script src="../proj/v112-districts.js"></script>
+<script src="../proj/v113-story.js"></script><script src="../proj/v113-level1.js"></script><script src="../proj/v113-level3.js"></script></body></html>

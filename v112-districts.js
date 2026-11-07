@@ -9,7 +9,7 @@
    ===================================================================== */
 (function () {
   'use strict';
-  var D = window.MG_DIST = { dist: {}, inter: {}, biz: [], built: {} };
+  var D = window.MG_DIST = { dist: {}, inter: {}, biz: [], built: {}, hooks: [] };
   var PI = Math.PI;
   function rdy() { return typeof worldReady !== 'undefined' && worldReady && typeof setArea === 'function' && typeof addI === 'function' && typeof box === 'function' && typeof makeActor === 'function' && typeof cityG !== 'undefined'; }
   function rngf(seed) { var s = seed >>> 0; return function () { s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -19,7 +19,7 @@
   function Kit(id, ox, oz) {
     var g = new THREE.Group(); scene.add(g); g.visible = false; g.userData.area = id; camBlock[id] = camBlock[id] || [];
     var K = { g: g, ox: ox, oz: oz, id: id, anims: [] };
-    K.b = function (w, h, d, c, x, y, z, o) { return box(g, w, h, d, c, ox + x, y, oz + z, Object.assign({ cam: true, col: true }, o || {})); };
+    K.b = function (w, h, d, c, x, y, z, o) { return box(g, w, h, d, c, ox + x, y, oz + z, Object.assign({ col: true, cam: true }, o || {})); };   // сплошной объект: коллайдер + блокировка камеры (без {col:true} игрок проходил бы насквозь)
     K.bp = function (w, h, d, c, x, y, z) { return box(g, w, h, d, c, ox + x, y, oz + z, {}); };           // без коллизии и без блокировки камеры
     K.m = function (geo, c, s, p, r) { return M_(g, geo, c, s, [ox + p[0], p[1], oz + p[2]], r, false); };
     K.col = function (x0, x1, z0, z1, h) { var c = addCol(ox + x0, ox + x1, oz + z0, oz + z1); c.h = h || 3; return c; };
@@ -349,6 +349,7 @@
     K.bp(w, .3, d, 0x20242c, 0, 4.6, 0); K.m(G.box, 0xfff6dc, [w - 2, .1, .5], [0, 4.5, -3]); K.m(G.box, 0xfff6dc, [w - 2, .1, .5], [0, 4.5, 3]);
     K.sign(P.name, 8, .8, 0, 3.7, -d / 2 + .35, 0, '#1d2129', '#ffd23f', { fs: .45, ds: false });
     K.m(G.box, 0x5a6a7a, [2.4, 3.2, .15], [0, 1.6, d / 2 - .1]); K.sign('ВЫХОД', 1.8, .4, 0, 3.4, d / 2 - .2, PI, '#1d7a3a', '#fff');
+    K.col(-1.6, 1.6, d / 2 - .25, d / 2 + .25, 3.4);                                                       // дверь закрывает проём: выйти можно только через «🚪 Выйти»
     K.addBiz('exit_' + key, 0, d / 2 - 1.4, '🚪 Выйти на улицу', function () { D.leave(); }, 2.2);
     var f = {
       garage: function () { K.bp(5, .35, 3.2, 0xd8342a, 0, 0, 1); K.b(.4, 3.8, .4, 0x3a3d44, -2.2, 0, -.4, { cam: false }); K.b(.4, 3.8, .4, 0x3a3d44, 2.2, 0, -.4, { cam: false });
@@ -404,7 +405,7 @@
 
   function ensureDistrict(d) {
     if (D.built[d.id]) return D.built[d.id].ok; var prev = BA;
-    try { BA = d.id; camBlock[d.id] = []; var K = Kit(d.id, d.ox, d.oz); d.build(K); D.built[d.id] = { K: K, ok: true }; }
+    try { BA = d.id; camBlock[d.id] = []; var K = Kit(d.id, d.ox, d.oz); d.build(K); D.built[d.id] = { K: K, ok: true }; (D.hooks || []).forEach(function (f) { try { f(d.id, K); } catch (e) { console.error('[MG_DIST hook]', e); } }); }
     catch (e) { console.error('[MG_DIST]', d.id, e); D.built[d.id] = { ok: false }; }
     finally { BA = prev || 'city'; }
     return D.built[d.id].ok;
