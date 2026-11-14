@@ -95,6 +95,35 @@
   T.confetti = function (K, lx, ly, lz, n) { for (var i = 0; i < (n || 30); i++) { var sp = emojiSprite(['🎉', '🎊', '✨', '💰', '🎈'][i % 5], .5 + Math.random() * .4); sp.position.set(K.ox + lx, ly, K.oz + lz); K.g.add(sp); T.fx.push({ s: sp, K: K, vx: (Math.random() - .5) * 5, vy: 3 + Math.random() * 4, vz: (Math.random() - .5) * 5, t: 0, life: 2.5 + Math.random() }); } };
   function fxTick(dt) { for (var i = T.fx.length - 1; i >= 0; i--) { var f = T.fx[i]; f.t += dt; f.vy -= 9 * dt; f.s.position.x += f.vx * dt; f.s.position.y += f.vy * dt; f.s.position.z += f.vz * dt; if (f.t > f.life || f.s.position.y < 0) { f.K.g.remove(f.s); T.fx.splice(i, 1); } } }
 
+  /* ---------------- движение NPC ----------------
+     ВАЖНО: основной цикл игры вызывает updActor только для своих списков (Нармина, Максим-основного сюжета, прохожие, работники…).
+     Персонажи, созданные новыми делами, в этих списках не числятся: без собственного обновления они стоят на месте, а
+     «await walkTo(...)» ждёт прибытия вечно (кат-сцена зависает, игрок остаётся заблокированным). Поэтому здесь —
+     реестр MG_NPCS, который обновляется каждый кадр (в том числе во время кат-сцен), с расклиниванием застрявших. */
+  window.MG_NPCS = window.MG_NPCS || [];
+  T.regNpc = function (a) { if (window.MG_NPCS.indexOf(a) < 0) window.MG_NPCS.push(a); return a; };
+  function npcUpdate(dt) {
+    var list = window.MG_NPCS;
+    for (var i = 0; i < list.length; i++) {
+      var a = list[i]; if (!a || a.hidden || a.area !== area) continue;
+      var ox = a.pos.x, oz = a.pos.z, had = !!a.target;
+      try { updActor(a, dt); } catch (e) { console.error('[MG_STORY npc]', a.id, e); continue; }
+      if (had && a.target) {                                                    // движется к цели: следим, не застрял ли
+        var mv = Math.hypot(a.pos.x - ox, a.pos.z - oz), want = (a.tspeed || 2) * dt;
+        a.__stk = mv < want * .25 ? (a.__stk || 0) + dt : 0;
+        if (a.__stk > 2.5) { a.__stk = 0; if (a.onArrive) { a.pos.x = a.target.x; a.pos.z = a.target.z; } else { a.target = null; a.moving = false; } }
+      } else a.__stk = 0;
+    }
+  }
+  /* ждать прибытия, но не вечно: если персонаж не дошёл — ставим его в точку и идём дальше (игрок не остаётся заблокированным) */
+  T.walk = function (a, x, z, sp) {
+    var d = Math.hypot(a.pos.x - x, a.pos.z - z), ms = Math.max(1800, d / Math.max(.5, sp || 3) * 1000 * 1.7 + 1800);
+    return new Promise(function (res) {
+      var done = false, tm = setTimeout(function () { if (done) return; done = true; a.target = null; a.onArrive = null; a.moving = false; placeA(a, x, z); res(); }, ms);
+      walkTo(a, x, z, sp).then(function () { if (done) return; done = true; clearTimeout(tm); res(); });
+    });
+  };
+
   /* ---------------- установка в игру ---------------- */
   var hooked = false;
   function install() {
@@ -107,7 +136,7 @@
       for (var i = 0; i < T.hints.length; i++) { var h; try { h = T.hints[i](); } catch (e) { h = null; } if (h) return h; }
       return oo();
     };
-    var pe = updEnv; window.updEnv = updEnv = function (dt, t) { pe(dt, t); try { fxTick(dt); if (T.lvl || T.alwaysTick) T.ticks.forEach(function (f) { f(dt, t); }); } catch (e) { console.error('[MG_STORY tick]', e); } };
+    var pe = updEnv; window.updEnv = updEnv = function (dt, t) { pe(dt, t); try { npcUpdate(dt); } catch (e) { console.error('[MG_STORY npcUpdate]', e); } try { fxTick(dt); if (T.lvl || T.alwaysTick) T.ticks.forEach(function (f) { try { f(dt, t); } catch (e) { console.error('[MG_STORY tick]', e); } }); } catch (e) { console.error('[MG_STORY tick]', e); } };
     var ps = setArea; window.setArea = setArea = function (a) { ps(a); for (var id in T.areas) T.areas[id].g.visible = (a === id); };
     console.log('[MG_STORY] продолжение сюжета подключено');
   }

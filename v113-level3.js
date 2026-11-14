@@ -193,12 +193,12 @@
   async function runnerScene() {
     if (warned) return; warned = true;
     await cutscene(async function () {
-      if (!runner) { runner = makeActor('s3_run', 'Мужчина', makePerson({ top: 0x6a7a8a, pants: 0x2a2a3a, hair: 0x5a5a5a, hairStyle: 'short', skin: 0xdba784, scale: 1 }), 'city'); }
+      if (!runner) { runner = makeActor('s3_run', 'Мужчина', makePerson({ top: 0x6a7a8a, pants: 0x2a2a3a, hair: 0x5a5a5a, hairStyle: 'short', skin: 0xdba784, scale: 1 }), 'city'); runner.area = 'city'; T.regNpc(runner); }
       runner.g.visible = true; placeA(runner, DX0, DZ0 - 2.4, 0);
       await T.shotW(DX0 + 4, 3, DZ0 + 9, DX0, 1.6, DZ0 - 2, 1000);
-      sfx('bonk'); await walkTo(runner, DX0, DZ0 + 2.5, 3.5);
+      sfx('bonk'); await T.walk(runner, DX0, DZ0 + 2.5, 3.5);
       await say([['runner', 'НЕ ЗАХОДИТЕ В МЯСНОЙ ОТДЕЕЕЕЛЛЛ…']]);
-      walkTo(runner, DX0 + 22, DZ0 + 14, 8.5); await wait(2600); runner.g.visible = false; placeA(runner, DX0, DZ0 - 2.4, 0);
+      T.walk(runner, DX0 + 22, DZ0 + 14, 8.5); await wait(2600); runner.g.visible = false; placeA(runner, DX0, DZ0 - 2.4, 0);
       await T.shotOff(900);
       await say([['gus', 'Это что сейчас было?'], ['marya', 'Мужчина с мясом на душе. Пошли.'], ['gus', 'Мне как-то… не очень.'], ['marya', 'Кола ждёт.']]);
       Q().stage = 2; T.save();
@@ -442,7 +442,7 @@
     });
     // побег: выход через пролом на парковку
     await cutscene(async function () {
-      await walkTo(player, k.ox - 30, k.oz - 70, 5.5); walkTo(comp, k.ox - 29, k.oz - 70, 5.5); await wait(900);
+      await T.walk(player, k.ox - 30, k.oz - 70, 5.5); T.walk(comp, k.ox - 29, k.oz - 70, 5.5); await wait(900);
       await T.shotTo(PA, -34, 3.2, -78, -30, 2.4, -66, 900);
       await say([['marya', 'Мы вышли. Парковка. Ночь. Холодно. Нормально.'], ['gus', 'Смотри. Дыра.']]);
       var h = K.hole; h.set(1.4); h.grow(1.2); await wait(1200);
