@@ -284,7 +284,7 @@
     if (panel) return;
     panel = el('div'); panel.id = 'mgset';
     var box = el('div'); box.className = 'box';
-    var head = el('header'); head.appendChild(el('h1', '', '⚙️ Настройки · v1.13.1'));
+    var head = el('header'); head.appendChild(el('h1', '', '⚙️ Настройки · v1.14.0'));
     var x = el('button'); x.className = 'x'; x.textContent = '✕'; x.onclick = closePanel; head.appendChild(x);
     nav = el('nav'); body = el('div'); body.className = 'body';
     box.appendChild(head); box.appendChild(nav); box.appendChild(body); panel.appendChild(box); document.body.appendChild(panel);
@@ -312,8 +312,8 @@
   function renderPanel() {
     if (!panel || !panel.classList.contains('on')) return;
     var sc = body.scrollTop; nav.innerHTML = ''; body.innerHTML = '';
-    [['gfx', '🎨 Графика'], ['ctl', '🎮 Управление'], ['cam', '🎥 Камера'], ['gen', '🧰 Общее']].forEach(function (t) { var b = el('button'); b.textContent = t[1]; b.className = tab === t[0] ? 'act' : ''; b.onclick = function () { tab = t[0]; confirmReset = false; renderPanel(); }; nav.appendChild(b); });
-    ({ gfx: tabGfx, ctl: tabCtl, cam: tabCam, gen: tabGen })[tab]();
+    [['gfx', '🎨 Графика'], ['ctl', '🎮 Управление'], ['cam', '🎥 Камера'], ['gen', '🧰 Общее'], ['adv', '🧪 Дополнительно']].forEach(function (t) { var b = el('button'); b.textContent = t[1]; b.className = tab === t[0] ? 'act' : ''; b.onclick = function () { tab = t[0]; confirmReset = false; renderPanel(); }; nav.appendChild(b); });
+    ({ gfx: tabGfx, ctl: tabCtl, cam: tabCam, gen: tabGen, adv: tabAdv })[tab]();
     body.scrollTop = sc;
   }
   function H(t) { return el('h3', '', t); }
@@ -385,6 +385,23 @@
     b.appendChild(r);
     if (G) { b.appendChild(H('Расстояние')); b.appendChild(slider('📷 Отдаление камеры (3-е лицо)', G.opt.cam, .7, 2, .05, pc, function (v) { G.setOpt('cam', v); })); }
   }
+  /* «Дополнительно» → «Экспериментальные функции» → ULTRA OVERHAUL ALPHA (см. v114-ultra.js) */
+  var advPage = '';
+  function tabAdv() {
+    var b = body, UL = window.MG_ULTRA;
+    function hint(t) { var e = el('div', '', t); e.className = 'hint'; return e; }
+    if (advPage === 'ultra' && UL && UL.renderSettings) {
+      var bk = el('button'); bk.className = 'bt2'; bk.textContent = '← Назад к экспериментальным функциям'; bk.onclick = function () { advPage = ''; renderPanel(); }; b.appendChild(bk);
+      try { UL.renderSettings({ body: b, el: el, tog: tog, slider: slider, choice: choice, H: H, pc: pc, rerender: renderPanel }); } catch (e) { console.error('[MG_SET ultra]', e); b.appendChild(hint('⚠️ Не удалось показать настройки режима.')); }
+      return;
+    }
+    b.appendChild(H('Экспериментальные функции'));
+    b.appendChild(hint('Здесь собраны функции в разработке. По умолчанию они выключены и не влияют на игру и сохранения.'));
+    if (!UL) { b.appendChild(hint('Экспериментальных функций в этой сборке нет.')); return; }
+    var u = el('button'); u.className = 'bt2';
+    u.innerHTML = '🚀 ULTRA OVERHAUL ALPHA<small>' + (UL.opt.on ? '✅ Включён. Нажми, чтобы настроить.' : 'Выключен. Новое небо, свет, тени, модели и текстуры на той же карте.') + '</small>';
+    u.onclick = function () { advPage = 'ultra'; body.scrollTop = 0; renderPanel(); }; b.appendChild(u);
+  }
   function tabGen() {
     var b = body;
     b.appendChild(H('Сброс'));
@@ -397,7 +414,7 @@
       r.appendChild(y); r.appendChild(n); b.appendChild(r);
     }
     b.appendChild(H('О версии'));
-    b.appendChild(el('div', 'hint', 'МГИАГ 1.13.1 «Новые дела». Настройки хранятся на этом устройстве и сохраняются между запусками.'));
+    b.appendChild(el('div', 'hint', 'МГИАГ 1.14.0 «Новые дела». Настройки хранятся на этом устройстве и сохраняются между запусками.'));
   }
   function resetAll() {
     var G = GFX(); if (G) { G.reset(); G.set('classic'); G.setOpt('distC', 1); G.setOpt('res', 1); }

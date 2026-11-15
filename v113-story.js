@@ -129,7 +129,7 @@
   function install() {
     if (hooked || !rdy()) return; hooked = true; installWho(); camHook();
     // «Список дел»: новые основные дела идут после финала основного сюжета
-    if (!MAIN.some(function (m) { return m.id === 'points'; })) MAIN.push({ id: 'points', icon: '💳', title: '5 000 000 баллов Максима', who: 'Марья и Гусь · квартира Марьи → «Перекрёсток»' }, { id: 'svet', icon: '🥩', title: 'Тайна Дикси и Светофора', who: 'Марья и Гусь · Дикси' });
+    if (!MAIN.some(function (m) { return m.id === 'points'; })) MAIN.push({ id: 'points', icon: '💳', title: '5 000 000 баллов Максима', who: 'Марья и Гусь · квартира Марьи → «Перекрёсток»' }, { id: 'chek', icon: '🧾', title: 'Чек из дыры', who: 'Марья и Гусь · Стеклянный квартал' }, { id: 'svet', icon: '🥩', title: 'Тайна Дикси и Светофора', who: 'Марья и Гусь · Дикси' });
     // цель на экране: сначала активная сцена, затем подсказки новых дел, потом обычная цепочка
     var oo = objective; window.objective = objective = function () {
       if (T.lvl && T.lvl.obj) return T.lvl.obj;

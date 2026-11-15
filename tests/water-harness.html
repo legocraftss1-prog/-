@@ -1,0 +1,22 @@
+<!doctype html><html><body><script>
+function mk(){const t={};return new Proxy(function(){},{get:(o,k)=>{if(k==='then'||typeof k==='symbol')return undefined;if(k in t)return t[k];if(['position','rotation','scale','material','geometry','shadow','target','color'].includes(k))return t[k]=mk();return(...a)=>mk();},set:(o,k,v)=>{t[k]=v;return true;},apply:()=>mk(),construct:()=>mk()});}
+window.THREE=new Proxy({},{get:(_,k)=>function(){return mk();}});
+THREE.UniformsLib={fog:{}};THREE.UniformsUtils={merge:a=>({})};
+const LAKE_G={x:-392,z:-20,rx:26,rz:48,depth:4.6};
+function lakeDip(x,z){const dx=(x-LAKE_G.x)/LAKE_G.rx;if(dx>1.2||dx<-1.2)return 0;const dz=(z-LAKE_G.z)/LAKE_G.rz;if(dz>1.2||dz<-1.2)return 0;const e=dx*dx+dz*dz;if(e>=1.02)return 0;const f=Math.min(1,(1.02-e)/.9);return -LAKE_G.depth*f*f*(3-2*f);}
+function H(x,z){return 16+lakeDip(x,z);}
+var worldReady=true,started=true,area='city',toasts=[],hurts=0;
+function toast(t){toasts.push(t);}function sfx(){}function puffAt(){}
+const lake={isMesh:true,visible:true,position:{y:16.18},userData:{isLake:true},material:{}};
+var cityG={children:[lake],traverse(f){f(lake);}};
+var scene={add(){},remove(){},traverse(){} ,background:null};
+var player={pos:{x:-392,y:16,z:-20},feet:16,yaw:0,vy:0,air:false,hp:100,drive:null,g:{position:{y:0},rotation:{x:0}},pose:'walk'};
+function hurtPlayer(n){hurts+=n;}
+var camera={position:{x:0,y:30,z:0}},fog=mk();
+var VEHS=[];function carDamage(v,a){v.dmg=(v.dmg||0)+a;}
+function repairCar(v){v.dmg=0;v.dead=false;}
+function doJump(){window.__jumped=1;}
+var peds=[],comp=player;
+function updPlayer(dt){player.pos.x+=0;}
+function updEnv(){}
+</script><script src="../v111-water.js"></script></body></html>

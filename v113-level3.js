@@ -162,7 +162,7 @@
   /* ====================== ИНТЕГРАЦИЯ В ОСНОВНОЙ МИР ====================== */
   var DX0 = 40, DZ0 = -16.2;             // место перед фасадом Дикси в городе
   function Q() { return T.P('svet'); }
-  function avail() { return !!(S.q.points && !S.q.svet && Q().stage === 0); }
+  function avail() { return !!(S.q.chek && !S.q.svet && Q().stage === 0); }
   function reset() { Object.assign(S3, { cola: false, cider: false, saw: false, badge: false, passed: false, fuses: 0, fuseGot: [false, false, false], doorOpen: false, chase: false, chasing: false, hide: false, hidden: false, grace: 0, caught: 0, finale: false, inside: false, meatT: 0, annT: 12, light: 'G', lightT: 4, lockers: [false, false, false, false, false], formed: false, caughtBusy: false }); MASS.trail = []; MASS.speed = 4.9; if (K.turnCol) { K.turnCol.on = true; K.turnV.visible = true; } }
 
   /* 1) Квартира: разговор с Гусем на кухне (после «5 000 000 баллов Максима») */
@@ -176,7 +176,7 @@
     });
   }
   T.hints.push(function () {
-    if (!S.q.points || S.q.svet) return null; var q = Q();
+    if (!S.q.chek || S.q.svet) return null; var q = Q();
     if (q.stage === 0) return { t: '🔴 Новое дело: на кухне у Гуся есть разговор про сидр и колу.', p: area === 'flat' ? { x: FLX + 4.6, z: FLZ + 2.4 } : (area === 'city' ? FLAT_DOOR : null) };
     if (T.lvl) return null;
     if (area === 'city' || area === 'flat') return { t: '🛒 Дикси — за сидром и колой.', p: area === 'flat' ? FLAT_DOOR : { x: DX0, z: DZ0 } };
@@ -186,8 +186,8 @@
   /* 2) Город: дверь Дикси, беглец */
   var runner = null, warned = false;
   function installCity() {
-    T.actW('city', DX0, DZ0, '🛒 Войти в Дикси', function () { enterDixie(); }, 4.0, function () { return S.q.points && !S.q.svet && Q().stage >= 1; });
-    T.ticks.push(function () { if (!warned && area === 'city' && S.q.points && !S.q.svet && Q().stage === 1 && Math.hypot(player.pos.x - DX0, player.pos.z - DZ0) < 16) runnerScene(); });
+    T.actW('city', DX0, DZ0, '🛒 Войти в Дикси', function () { enterDixie(); }, 4.0, function () { return S.q.chek && !S.q.svet && Q().stage >= 1; });
+    T.ticks.push(function () { if (!warned && area === 'city' && S.q.chek && !S.q.svet && Q().stage === 1 && Math.hypot(player.pos.x - DX0, player.pos.z - DZ0) < 16) runnerScene(); });
     T.alwaysTick = true;
   }
   async function runnerScene() {

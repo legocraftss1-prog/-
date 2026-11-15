@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset="utf-8"><style>.hidden{display:none!important}#rightBtns{position:fixed;right:10px;bottom:60px}#rightBtns button{width:60px;height:60px}</style></head><body>
+<canvas id="c" width="430" height="860" style="position:fixed;left:0;top:0;width:430px;height:860px"></canvas>
+<div id="rightBtns"><button id="bAct">✋</button><button id="bFire" class="hidden">💥</button></div>
+<script src="mini-three.js"></script>
+<script src="../proj/v114-ultra.js"></script>
+<script src="../proj/v114-ultra-sky.js"></script>
+<script src="../proj/v114-ultra-post.js"></script>
+<script src="../proj/v114-ultra-world.js"></script>
+<script src="../proj/v114-ultra-controls.js"></script>
+<script>
+var TAU=Math.PI*2,$=id=>document.getElementById(id);
+var toasts=[];function toast(t){toasts.push(t);}
+var rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)],clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+function H(){return 0;}var COLS=0;function addCol(x0,x1,z0,z1){COLS++;return {x0,x1,z0,z1,on:true};}function ac(){}
+var canvas=$('c'),renderer=THREE.__mkRenderer(canvas),scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(62,.5,.1,620);
+scene.background=new THREE.Color(0xb7d2ea);var fog=new THREE.Fog(0xb7d2ea,50,175);scene.fog=fog;
+var hemi=new THREE.HemisphereLight(0xeaf4ff,0x5e604c,.95);scene.add(hemi);var sun=new THREE.DirectionalLight(0xfff0d8,.75);sun.position.set(40,80,30);scene.add(sun);
+var cityG=new THREE.Group();scene.add(cityG);var area='city',BA='city',camBlock={city:[]};
+var started=true,worldReady=false,hemiOverride=null,cloudI=0,fogI=0,rainI=0,snowI=0,wet=0,night=0;
+var WORLD={t:12,season:'summer',weather:'clear',timeFlow:true},SEASONS={summer:{light:1.08}};
+var player={pos:new THREE.Vector3(5,0,7),drive:null,g:new THREE.Group()};
+var cam={yaw:0,pitch:.36,dist:6.2,drag:0,force:null};window.CAMMUL=1;var camLog=[];
+function updCamera(dt){camLog.push(window.CAMMUL||1);}
+var envN=0;function updEnv(dt,t){envN++;hemi.intensity=.95;sun.intensity=.7;sun.position.set(40,80,30);fog.color.setHex(0xb7d2ea);scene.background.setHex(0xb7d2ea);}
+var IS_TOUCH=true,firing=false,shots=0;
+$('bFire').addEventListener('pointerdown',e=>{e.preventDefault();firing=true;shots++;});$('bFire').addEventListener('pointerup',()=>firing=false);$('bFire').addEventListener('pointercancel',()=>firing=false);
+window.MG_GFX={mode:'classic',applied:false,sets:[],set(m){this.sets.push(m);if(m==='classic'){renderer.shadowMap.enabled=false;sun.castShadow=false;}}};
+</script>
+<script src="realworld.js"></script>
+<script>
+var snowCapMat=new THREE.MeshLambertMaterial({color:0xf4f8fc});
+var brickTex=canvasTex(256,256,()=>{}),modernTex=canvasTex(256,256,()=>{}),modernEm=canvasTex(256,256,()=>{}),WOODTEX=canvasTex(256,256,()=>{});
+var BUILT={};
+function init(){
+  if(typeof MG_ULTRA_PRE==='function'){try{MG_ULTRA_PRE();}catch(e){console.error('[ULTRA pre]',e);}}
+  const n0=cityG.children.length;
+  BUILT.b=building(0,0,30,20,18,'#d9d4cc',{});building(60,0,12,12,6,0xc8b89a,{noRoof:true});building(100,0,24,24,15,0xaab4c0,{tex:modernTex,em:modernEm});building(140,0,14,14,9,0xffffff,{tex:brickTex,em:winEm});
+  for(let i=0;i<40;i++)tree(i*7-100,50+(i%5)*3,1+(i%3)*.2);
+  BUILT.car=car(cityG,10,30,0,0xc0392b);BUILT.dyn=car(cityG,20,30,0,0x2e86c1,true);
+  const vg=new THREE.Group();cityG.add(vg);wheels(vg,[[-.9,-1.4],[.9,-1.4],[-.9,1.4],[.9,1.4]],.36,.32);BUILT.vg=vg;
+  lamp(5,5,0);BUILT.lamp=cityG.children[cityG.children.length-1];BUILT.bench=bench(cityG,8,8,0);
+  box(cityG,10,.2,10,walkMat,0,0,40);box(cityG,10,.2,10,roadMat,0,0,60);box(cityG,10,.2,10,groundMat,0,0,80);M_(cityG,G.box,0x2a3646,[1,1,1],[0,1,90]);
+  BUILT.added=cityG.children.length-n0;BUILT.cols=COLS;
+  worldReady=true;
+}
+function tick(dt){updEnv(dt||.016,0);updCamera(dt||.016);renderer.render(scene,camera);}
+if(!/noinit/.test(location.search))init();
+</script></body></html>

@@ -83,7 +83,7 @@
   function flagShadow(o) {
     var m = o.material; if (!m) return;
     var arr = Array.isArray(m) ? m : [m];
-    if (GFX.opt.shadows) {
+    if (GFX.opt.shadows || (window.MG_ULTRA && MG_ULTRA.shadowsOn)) {
       var lit = arr.some(function (x) { return x.isMeshLambertMaterial || x.isMeshPhongMaterial; });
       var big = false;
       if (o.geometry) { if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); big = o.geometry.boundingSphere && o.geometry.boundingSphere.radius > 78 && !o.userData.merged; }

@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8"><title>harness</title></head><body>
+<div id="menu"><button>▶ Играть</button></div>
+<script>
+function mk(){const t={};return new Proxy(function(){},{get:(o,k)=>{if(k==='then'||typeof k==='symbol')return undefined;if(k in t)return t[k];if(['position','rotation','scale','material','geometry','shadow','target'].includes(k))return t[k]=mk();return(...a)=>mk();},set:(o,k,v)=>{t[k]=v;return true;},apply:()=>mk(),construct:()=>mk()});}
+window.THREE=new Proxy({},{get:(_,k)=>function(){return mk();}});
+window.MGIAG_SERVER=new URLSearchParams(location.search).get('s');
+var toasts=[];function toast(t){toasts.push(t);}function sfx(){}
+var started=false,SAVE_MODE='solo',SAVE_SLOT=1,worldReady=true,area='city';
+var S={weapon:null};var keys={},joy={x:0,y:0},RCV={},shake=0;
+var scene={add(){},remove(){}},G={cyl:{},hemi:{},cone:{},sph:{}};
+function mat(){return {};}
+var player={pos:{x:5,y:0,z:7},yaw:1,hp:100,g:mk(),moving:true,run:false,drive:null};
+function makePerson(){return {g:mk(),P:{}};}
+function makeActor(id,n,m){return {id,pos:{x:0,y:0,z:0,set(x,y,z){this.x=x;this.y=y;this.z=z;}},g:m.g,yaw:0};}
+function poseActor(){}function H(){return 0;}function freeAt(){return true;}function placeA(a,x,z){a.pos.x=x;a.pos.z=z;}
+function emojiSprite(){return mk();}function puffAt(){}function equipWeapon(k){S.weapon=k;}
+function ensure5(){}function fullSave(){}function freshSave(){return {q:{}};}function loadSave(){return null;}
+function start(sv){started=true;S=sv;}
+var WEAP={revolver:{e:'🔫',n:'Goose Revolver'},ak:{e:'🔫',n:'AK-47'}};
+var TAXI_POINTS=[];for(let i=0;i<200;i++)TAXI_POINTS.push([(i%20)*15-150,Math.floor(i/20)*15-70]);
+function flashHurt(){}function exitVehicle(){}function collide(){}function wrapA(){}
+function chaosOn(){return false;}function hurtPlayer(n){player.hp-=n;}function playerDown(){}
+function hitScan(o,d,max){return {t:max,kind:null};}function applyHit(){}function shoot(){window.__shot=(window.__shot||0)+1;}
+function bigBlast(){}function slipHere(){return false;}function updPlayer(dt){window.__upd=(window.__upd||0)+1;}
+function updEnv(dt,t){}function fx(){}
+setInterval(()=>{try{updPlayer(.05);updEnv(.05,performance.now()/1000);}catch(e){window.__err=String(e.stack||e);}},50);
+</script>
+<script src="../proj/server-config.js"></script>
+<script>window.MGIAG_SERVER=new URLSearchParams(location.search).get('s');</script>
+<script src="../proj/v111-online.js"></script>
+</body></html>

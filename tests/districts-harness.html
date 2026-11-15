@@ -1,0 +1,31 @@
+<!doctype html><html><body><div id="sheetBody"></div><div id="sheetFoot"></div><script>
+function mk(){const t={};return new Proxy(function(){},{get:(o,k)=>{if(k==='then'||typeof k==='symbol')return undefined;if(k in t)return t[k];if(['position','rotation','scale','material','geometry','children'].includes(k))return t[k]=mk();return(...a)=>mk();},set:(o,k,v)=>{t[k]=v;return true;},apply:()=>mk(),construct:()=>mk()});}
+window.THREE=new Proxy({},{get:(_,k)=>function(){return mk();}});
+window.$=id=>document.getElementById(id);
+var stats={box:0,M:0,sign:0,cols:0,actors:0,spr:0};
+var worldReady=true,area='city',BA='city',started=true,player={id:'marya',name:'Марья',pos:{x:0,z:0},feet:0,yaw:0,drive:null,hp:50},comp={id:'gus'},cam={yaw:0},inters=[],camBlock={city:[]},cityG=mk(),scene=mk();
+var toasts=[];function toast(t){toasts.push(t);}function sfx(){}function H(){return 0;}
+function box(g,w,h,d,c,x,y,z,o){stats.box++;if(o&&o.cam)camBlock[BA].push(1);if(o&&o.col){}return mk();}
+function M_(){stats.M++;return mk();}function sign(){stats.sign++;return mk();}
+function addCol(){stats.cols++;return {};}function addColC(){stats.cols++;return {};}
+var G={box:1,cyl:2,cone:3,sph:4,hemi:5,circ:6};
+function mat(c){return {color:c};}
+function emojiSprite(){stats.spr++;return mk();}
+function makePerson(o){return {g:mk(),P:{},o};}function makeActor(id,n,m,a){stats.actors++;return {id,name:n,g:m.g,pos:{x:0,z:0},area:a};}
+function placeA(a,x,z){a.pos.x=x;a.pos.z=z;if(a.g&&a.g.position&&a===player)return;}
+function addI(o){inters.push(o);return o;}function setArea(a){area=a;}
+function cutscene(fn){return fn();}function fade(){return Promise.resolve();}const wait=()=>Promise.resolve();function showComp(){}function dismount(){}function collide(){}function fullSave(){}function saveGame(){}
+function blocked(){return false;}
+var S={money:{marya:10000,gus:500},invs:{marya:[],gus:[]},d12:null,ach:{}};
+const ITEMS={potato:['🥔','Картошка','x'],card:['💳','Карта','x'],newspaper:['📰','Газета','x']};const EATL={bread:'x'};
+function invOf(){return S.invs[player.id];}function addItem(k){invOf().push(k);}function removeItem(k){const a=invOf();const i=a.indexOf(k);if(i>=0)a.splice(i,1);}
+function money(){return S.money[player.id];}function addMoney(n,w){S.money[player.id]+=n;(window.__log=window.__log||[]).push([n,w]);}function spend(n){if(S.money[player.id]<n){toast('мало денег');return false;}S.money[player.id]-=n;return true;}
+function fmt(n){return n+'₽';}function say(){return Promise.resolve();}function unlockAch(){}
+var VEHS=[{dmg:40,dead:false,id:'a'},{dmg:0,dead:false,id:'b'}];function repairCar(v){v.dmg=0;}
+function timing(m,o){return Promise.resolve(window.__tg===undefined?3:window.__tg);}
+var __modal=null;function openModal(k,render){__modal={k};render();}function closeModal(){}
+function rowBtn(b,label,sub,btn,fn,dis){const d=document.createElement('div');d.dataset.l=label;d.dataset.b=btn;d.dataset.dis=dis?1:0;d._fn=fn;b.appendChild(d);}
+function useItem(k){const a=invOf();const i=a.indexOf(k);if(i>=0&&EATL[k])a.splice(i,1);}
+function updPlayer(){}function updEnv(){}function start(sv){window.__started=sv;}
+function slotKey(n){return 'slot'+n;}var SAVE_SLOT=1;function renderPhone(){}
+</script><script src="../proj/v112-business.js"></script><script src="../proj/v112-districts.js"></script></body></html>
