@@ -2,3 +2,5 @@
 Показывают, что именно проверялось. Для игроков не нужны, в игре не используются.
 
 ULTRA (1.14): ultra-test.js (логика на заглушке ultra-mini-three.js + ultra-realworld.js, стенд ultra-harness.html), ultra-shader-test.js (компиляция шейдеров и картинки в настоящем WebGL), ultra-settings-test.js (меню «Дополнительно»).
+
+Сюжетка №14 (1.15): story14-test.js (прохождение, проходимость этажей, все Антоны, борьба за батон, финал, перезапуск; стенд story14-harness.html с настоящим кодом коллизий), story14-dev-test.js (раздел DEV).

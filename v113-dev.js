@@ -84,6 +84,7 @@
     DC(b, '🧾 «Чек из дыры» — с начала', function () { prep('chek'); closeModal(); var d = MG_DIST && MG_DIST.dist.biz; if (d) setTimeout(function () { MG_DIST.travel(d); }, 80); }, 'старт: дыра в Стеклянном квартале');
     DC(b, '🥩 «Тайна Дикси и Светофора» — с начала', function () { prep('svet'); closeModal(); enterFlat(false); }, 'старт: кухня в квартире');
     DC(b, '♻️ Сбросить все новые дела 1.13', function () { newQ().forEach(function (q) { S.q[q[0]] = false; }); S.p13 = {}; setTimeout(function () { location.reload(); }, 600); }, 'перезапуск игры');
+    if (window.MG_L14) storyL14(b);
     var L = T.lvl;
     if (L && L.n === 1 && window.MG_L1) storyL1(b);
     if (window.MG_L2 && S.q.points && !S.q.chek) storyL2(b);
@@ -98,6 +99,23 @@
     if (id === 'chek' && window.MG_L2) { var K2 = MG_L2.K2; if (K2.receipt && K2.kb) { K2.kb.g.remove(K2.receipt); K2.receipt = null; } }
     if (window.MG_STORY) MG_STORY.lvl = null;
     comp.hidden = false;
+  }
+  function storyL14(b) {
+    var M = MG_L14, q = M.Q(), f = q.f, d = M.dev;
+    phSec(b, '🕳️ «Дыра в центре города» — этап ' + q.stage + '/5');
+    phLine(b, 'Этапы: 0 — дыра на перекрёстке, 1 — тёмный мир, 2 — путь к хлебозаводу, 3 — хлебозавод, 4 — борьба за батон, 5 — финал.', 12);
+    DC(b, '🕳️ Начать дело с начала', function () { d.restart(); closeModal(); }, 'все прежние дела отмечаются выполненными, перенос на главный перекрёсток');
+    D(b, '🌑 В тёмный мир (без вступления)', function () { closeModal(); setTimeout(function () { d.dark(); }, 60); });
+    D(b, '🟢 Выдать 3 осколка портала', function () { d.shards(); });
+    D(b, '🏭 На хлебозавод (проходная)', function () { closeModal(); setTimeout(function () { d.fab(); }, 60); });
+    phLine(b, 'Завод: ' + [['pass', 'пропуск'], ['door', 'пультовая'], ['robot', 'робот'], ['power', 'линия'], ['crate', 'ящик'], ['flour', 'мука'], ['duct', 'заслонка'], ['thaw', 'оттаял'], ['starter', 'закваска'], ['rubber', 'резина'], ['baked', 'батон 1'], ['fed', 'обжора'], ['giant', 'великан'], ['got', 'батон']].map(function (x) { return (f[x[0]] ? '✔' : '▫') + x[1]; }).join(' '), 12);
+    D(b, '👻 Призрак и пультовая решены', function () { d.flags(['pass', 'door']); });
+    D(b, '🤖 Робот выключен, линия включена', function () { d.flags(['pass', 'door', 'robot', 'power']); });
+    D(b, '🪞 Мука добыта', function () { d.flags(['crate', 'flour']); });
+    D(b, '🥶 Закваска добыта', function () { d.flags(['duct', 'thaw', 'starter']); });
+    D(b, '🍞 Обжора занят, Великан ушёл', function () { d.flags(['pass', 'door', 'robot', 'power', 'crate', 'flour', 'duct', 'thaw', 'starter', 'rubber', 'baked', 'fed', 'giant']); });
+    D(b, '🥖 Сразу к борьбе за батон', function () { closeModal(); setTimeout(function () { d.tug(); }, 60); });
+    D(b, '⏩ Завершить текущую часть борьбы', function () { d.skipTug(); });
   }
   function storyL1(b) {
     var st = MG_L1.ST, q = MG_L1.Q();

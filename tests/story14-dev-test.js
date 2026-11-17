@@ -1,0 +1,15 @@
+const { chromium } = require('playwright');
+let pass=0,fail=0;const ok=(c,n,x)=>{c?pass++:fail++;console.log(c?'  ✔':'  ✘ ПРОВАЛ:',n,c?'':JSON.stringify(x));};
+(async()=>{const br=await chromium.launch({args:['--no-sandbox']});const pg=await br.newPage({viewport:{width:900,height:700}});const errs=[];pg.on('pageerror',e=>errs.push(String(e)));pg.on('console',m=>{if(m.type()==='error')errs.push(m.text());});
+ await pg.goto('file:///home/claude/h12/index.html');await pg.waitForFunction(()=>window.MG_DEVX&&MG_DEVX.tabs,null,{timeout:8000});await pg.waitForTimeout(600);
+ const r=await pg.evaluate(()=>{S.dev=true;const calls=[];const q={stage:3,f:{pass:true,door:true}};
+  window.MG_L14={Q:()=>q,dev:{restart(){calls.push('restart');},dark(){calls.push('dark');},shards(){calls.push('shards');},fab(){calls.push('fab');},flags(l){calls.push('flags:'+l.join(','));},tug(){calls.push('tug');},skipTug(){calls.push('skip');}}};
+  devTab='story';renderPhone();const rows=[...document.querySelectorAll('#sheetBody .inv')];const txt=document.getElementById('sheetBody').textContent;
+  const click=s=>{const x=rows.find(r=>r.textContent.includes(s));if(!x)return false;x.querySelector('button').click();return true;};
+  const res={sec:/Дыра в центре города» — этап 3\/5/.test(txt),flags:/✔пропуск ✔пультовая ▫робот/.test(txt)};
+  res.c=['Выдать 3 осколка','Призрак и пультовая решены','Мука добыта','Закваска добыта','Обжора занят','Завершить текущую часть'].map(click);
+  return {res,calls};});
+ ok(r.res.sec&&r.res.flags,'в DEV на вкладке «Сюжет» есть раздел новой сюжетки с этапом и флагами завода',r.res);
+ ok(r.res.c.every(Boolean)&&r.calls.join('|')==='shards|flags:pass,door|flags:crate,flour|flags:duct,thaw,starter|flags:pass,door,robot,power,crate,flour,duct,thaw,starter,rubber,baked,fed,giant|skip','кнопки DEV вызывают нужные действия',r.calls);
+ ok(errs.length===0,'ошибок нет',errs.slice(0,3));
+ console.log('\n══ DEV для сюжетки №14: '+pass+' ок, '+fail+' провалов ══');await br.close();})();

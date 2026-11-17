@@ -295,7 +295,7 @@ body.busy #controls *{pointer-events:none}
   <h1>Марья,<br>Гусь<br>и абсурдный город</h1>
   <div class="tag">Обычный район. Обычные дворы. Над домом летит собака. Никто не реагирует.</div>
   <div class="bt"><button id="bPlay" disabled><span id="loading">Город загружается…</span></button><button id="bNew" class="alt hidden">Новая игра</button></div>
-  <div class="hint">VERSION 1.14.0 «Новые дела» Левая часть экрана — ходить, правая — камера. ПК: WASD, Shift, E, Q, F, пробел — прыжок.</div>
+  <div class="hint">VERSION 1.15.0 «Новые дела» Левая часть экрана — ходить, правая — камера. ПК: WASD, Shift, E, Q, F, пробел — прыжок.</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -4033,7 +4033,7 @@ function renderTodo2(){const tabs=$('tabs');tabs.innerHTML='';
   const b=$('sheetBody');b.innerHTML='';const h=document.createElement('h2');b.appendChild(h);
   const item=(ic,name,who,state)=>{const d=document.createElement('div');d.className='ti'+(state==='done'?' done':state==='lock'?' lock':'');d.innerHTML='<span class="ic"></span><span class="tx"><span class="nm"></span><span class="wh"></span></span><span class="st"></span>';
     d.querySelector('.ic').textContent=ic;d.querySelector('.nm').textContent=name;d.querySelector('.wh').textContent=who||'';d.querySelector('.st').textContent=state==='done'?'✓':state==='act'?'▸':'';b.appendChild(d);};
-  if(todoTab===0){h.textContent='🔴 Основной сюжет';const unlocked={ex:true,door:true,snow:S.q.door,dixie:S.q.snow,flat:true,harry:S.q.flat,dixie2:S.q.harry,drill:S.q.dixie2,court:S.q.drill,ufo:S.q.court,points:S.q.ufo,chek:S.q.points,svet:S.q.chek};const first=MAIN.find(m=>!S.q[m.id]);
+  if(todoTab===0){h.textContent='🔴 Основной сюжет';const unlocked={ex:true,door:true,snow:S.q.door,dixie:S.q.snow,flat:true,harry:S.q.flat,dixie2:S.q.harry,drill:S.q.dixie2,court:S.q.drill,ufo:S.q.court,points:S.q.ufo,chek:S.q.points,svet:S.q.chek,baton14:S.q.svet};const first=MAIN.find(m=>!S.q[m.id]);
     MAIN.forEach(m=>{if(!unlocked[m.id]){item('🔒','Что-то ещё будет.','','lock');return;}item(m.icon,m.title.toUpperCase(),m.who,S.q[m.id]?'done':(m===first?'act':''));});}
   else if(todoTab===1){h.textContent='🟡 Дополнительный сюжет';sideStory().forEach(q=>{const s=document.createElement('div');s.className='sec';s.textContent=q.t;b.appendChild(s);q.steps.forEach(([t,ok])=>item(ok?'✅':'▫️',t,'',ok?'done':''));if(q.note)item('📈',q.note,'','');});}
   else if(todoTab===2){h.textContent='⚪ Свободные занятия';ACTIVITIES.forEach(a=>item(a[0],a[1],a[2],''));}
@@ -4059,7 +4059,7 @@ renderPhone=function(){if(!['invites','settings','dev'].includes(phoneApp)){_ren
       rowBtn(b,'❌ Отказаться','','Нет',()=>{SKEV.state='none';notify('Отказ отправлен. Позовут в другой раз.','🛹');renderPhone();});}
     else if(SKEV.state==='accepted')line('⭐ Ты участвуешь: скейт-парк «Доска», сегодня с 18:00. Метка на карте.');
     else line('Новых приглашений нет. Они приходят, когда изучено 4+ трюка — не чаще раза в пару игровых дней.');}
-  if(phoneApp==='settings'){h.textContent='⚙️ Настройки · VERSION 1.14.0 «Новые дела»';
+  if(phoneApp==='settings'){h.textContent='⚙️ Настройки · VERSION 1.15.0 «Новые дела»';
     rowBtn(b,'🚪 Выйти в главное меню',COOP.on?(COOP.host?'прогресс сохранится у тебя':'прогресс сохранится у создателя комнаты'):'игра сохранится','Выйти',()=>exitToMenu());line('💾 Автосохранение: каждые 20 секунд и при сворачивании. Сохраняется всё: деньги, транспорт, позиции, трюки, бизнес, сюжет, вещи, мир.',15);
     if(S.savedAt)line('Последнее сохранение: '+new Date(S.savedAt).toLocaleTimeString('ru-RU'),15);
     rowBtn(b,'💾 Сохранить сейчас (слот '+SAVE_SLOT+')','','Сохранить',()=>{fullSave(true);renderPhone();});slotsPanel(b);
@@ -6997,6 +6997,8 @@ async function init(){
   if(typeof MG_ULTRA_PRE==='function'){try{MG_ULTRA_PRE();}catch(e){console.warn('[ULTRA pre]',e);}}
   buildCity();buildZones();buildProps();buildShop();buildFactory();buildMainInters();buildFactoryInters();buildLife();buildUpdate();buildEconomy();buildWorld13();buildSystems13();buildRelease();buildWorld2();buildSystems2();buildSystems3();buildSystems4();buildSystems5();buildSystems6();buildSystems7();buildSystems9();buildSystems8();buildSystems10();buildSystems11();buildSystems12();
   BA='city';mergeStatic(cityG);mergeStatic(shopG);registerCull();fixColliderHeights();buildColGrid();
+  /* 1.14.1: убраны невидимые стены в парке «Утиный» (коллизия карусели и одной скамейки без видимой модели) */
+  [[55.8,64.2,665.8,674.2],[39.2,39.8,708.8,710.8]].forEach(([x0,x1,z0,z1])=>cols.forEach(c=>{if(Math.abs(c.x0-x0)<.15&&Math.abs(c.x1-x1)<.15&&Math.abs(c.z0-z0)<.15&&Math.abs(c.z1-z1)<.15)c.on=false;}));
   applySeason(WORLD.season);
   placeA(narmina,-47,-16,Math.PI*.8);narmina.ai='idle';
   maksim.hidden=true;maksim.g.visible=false;
@@ -7039,6 +7041,7 @@ requestAnimationFrame(loop);init();
 <script src="v113-level1.js"></script>
 <script src="v113-level2.js"></script>
 <script src="v113-level3.js"></script>
+<script src="v115-level14.js"></script>
 <script src="v113-dev.js"></script>
 </body>
 </html>
