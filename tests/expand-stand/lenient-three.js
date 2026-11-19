@@ -8,7 +8,9 @@ class Vector3{constructor(x=0,y=0,z=0){this.x=x;this.y=y;this.z=z;return soft(th
  normalize(){const l=this.length()||1;return this.multiplyScalar(1/l);}dot(v){return this.x*v.x+this.y*v.y+this.z*v.z;}
  crossVectors(a,b){const x=a.y*b.z-a.z*b.y,y=a.z*b.x-a.x*b.z,z=a.x*b.y-a.y*b.x;this.x=x;this.y=y;this.z=z;return this;}
  setScalar(v){this.x=this.y=this.z=v;return this;}distanceTo(v){return Math.hypot(this.x-v.x,this.y-v.y,this.z-v.z);}distanceToSquared(v){return (this.x-v.x)**2+(this.y-v.y)**2+(this.z-v.z)**2;}subVectors(a,b){this.x=a.x-b.x;this.y=a.y-b.y;this.z=a.z-b.z;return this;}addVectors(a,b){this.x=a.x+b.x;this.y=a.y+b.y;this.z=a.z+b.z;return this;}cross(v){return this.crossVectors(this.clone(),v);}transformDirection(m){if(!m||!m.isMatrix4)throw new Error('transformDirection: нужна Matrix4');return this.normalize();}}
-class Matrix4{constructor(){this.isMatrix4=true;this.elements=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];return soft(this);}}
+class Matrix4{constructor(){this.isMatrix4=true;this.elements=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];return soft(this);}
+ compose(p,q,sc){const e=this.elements;e.fill(0);e[0]=sc.x;e[5]=sc.y;e[10]=sc.z;e[12]=p.x;e[13]=p.y;e[14]=p.z;e[15]=1;return this;}
+ makeScale(x,y,z){const e=this.elements;e.fill(0);e[0]=x;e[5]=y;e[10]=z;e[15]=1;return this;}}
 class Color{constructor(r,g,b){this.isColor=true;this.r=1;this.g=1;this.b=1;if(g===undefined&&b===undefined){if(r!==undefined)this.set(r);}else this.setRGB(r,g,b);return soft(this);}
  set(v){if(v&&v.isColor)return this.copy(v);if(typeof v==='number')return this.setHex(v);if(typeof v==='string'){if(/^#[0-9a-f]{6}$/i.test(v))return this.setHex(parseInt(v.slice(1),16));throw new Error('Color: строка '+v);}return this;}
  setHex(h){h=Math.floor(h);this.r=(h>>16&255)/255;this.g=(h>>8&255)/255;this.b=(h&255)/255;return this;}getHex(){return (Math.round(this.r*255)<<16)^(Math.round(this.g*255)<<8)^Math.round(this.b*255);}
@@ -48,7 +50,7 @@ class SphereGeometry extends BufferGeometry{constructor(r=1,w=8,h=6){super();fil
 class PlaneGeometry extends BufferGeometry{constructor(){super();fill(this,4,true);}}
 class Material{constructor(p){const self=soft(this);this.userData={};this.needsUpdate=false;this.transparent=false;this.visible=true;this.side=0;this.fog=true;this.depthTest=true;this.depthWrite=true;this.toneMapped=true;this.defines=undefined;this.version=0;
  this.onBeforeCompile=function(){};this.customProgramCacheKey=function(){return this.onBeforeCompile.toString();};
- for(const k in (p||{}))this[k]=p[k];['emissive','specular'].forEach(k=>{const v=this[k];if(v!==undefined&&v!==null&&!(v&&v.isColor))this[k]=new Color(v);});if(this.emissive===undefined)this.emissive=new Color(0);return self;}}
+ for(const k in (p||{}))this[k]=p[k];['emissive','specular','color'].forEach(k=>{const v=this[k];if(v!==undefined&&v!==null&&!(v&&v.isColor))this[k]=new Color(v);});if(this.emissive===undefined)this.emissive=new Color(0);return self;}}
 const BASE=['color','map','transparent','opacity','side','fog','depthTest','depthWrite','visible','vertexColors'];
 class MeshLambertMaterial extends Material{constructor(p){super(p);this.isMeshLambertMaterial=true;if(!(this.color&&this.color.isColor))this.color=new Color(this.color===undefined?0xffffff:this.color);
  ['map','envMap','specularMap','emissiveMap'].forEach(k=>{if(this[k]===undefined)this[k]=null;});if(this.combine===undefined)this.combine=0;if(this.reflectivity===undefined)this.reflectivity=1;}}
@@ -93,7 +95,7 @@ class GenericMat extends Material{constructor(p){super(p);if(!(this.color&&this.
 class Points extends Object3D{constructor(g,m){super();this.isPoints=true;this.geometry=g;this.material=m;}}
 class LineSegments extends Object3D{constructor(g,m){super();this.isLineSegments=true;this.geometry=g;this.material=m;}}
 class Line extends Object3D{constructor(g,m){super();this.isLine=true;this.geometry=g;this.material=m;}}
-class InstancedMesh extends Mesh{constructor(g,m,n){super(g,m);this.isInstancedMesh=true;this.count=n;this.instanceMatrix={needsUpdate:false,setUsage(){}};}setMatrixAt(){}setColorAt(){}}
+class InstancedMesh extends Mesh{constructor(g,m,n){super(g,m);this.isInstancedMesh=true;this.count=n;this.instanceMatrix={needsUpdate:false,setUsage(){},array:new Float32Array(16*n)};}setMatrixAt(i,m){if(m&&Array.isArray(m.elements)||m&&m.elements instanceof Float32Array)this.instanceMatrix.array.set(m.elements,i*16);}setColorAt(){}}
 class Raycaster{constructor(){this.ray={origin:new Vector3(),direction:new Vector3()};this.far=Infinity;this.layers=new Layers();}set(o,d){this.ray.origin.copy(o);this.ray.direction.copy(d);}setFromCamera(){}intersectObjects(){return [];}intersectObject(){return [];}}
 class Quaternion{constructor(){this.x=0;this.y=0;this.z=0;this.w=1;}setFromEuler(){return this;}setFromAxisAngle(){return this;}copy(){return this;}}
 class Shape{constructor(){}moveTo(){return this;}lineTo(){return this;}quadraticCurveTo(){return this;}bezierCurveTo(){return this;}absarc(){return this;}}

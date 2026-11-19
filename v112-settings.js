@@ -284,7 +284,7 @@
     if (panel) return;
     panel = el('div'); panel.id = 'mgset';
     var box = el('div'); box.className = 'box';
-    var head = el('header'); head.appendChild(el('h1', '', '⚙️ Настройки · v1.18.0'));
+    var head = el('header'); head.appendChild(el('h1', '', '⚙️ Настройки · v1.19.0'));
     var x = el('button'); x.className = 'x'; x.textContent = '✕'; x.onclick = closePanel; head.appendChild(x);
     nav = el('nav'); body = el('div'); body.className = 'body';
     box.appendChild(head); box.appendChild(nav); box.appendChild(body); panel.appendChild(box); document.body.appendChild(panel);
@@ -349,6 +349,13 @@
         b.appendChild(slider('📏 Дальность мелких объектов', PF.dist, 60, 320, 10, function (v) { return Math.round(v) + ' м'; }, function (v, live) { if (!live) PF.setDist(v); }));
         b.appendChild(tog('Не рисовать то, что скрыто туманом', 'Ночью, в туман и дождь дальность сама уменьшается.', PF.fog, function () { PF.setFog(!PF.fog); renderPanel(); }));
       }
+    }
+    var LK = window.MG_LOOK;
+    if (LK) {
+      b.appendChild(H('Трава, тени и свет'));
+      b.appendChild(choice('🌿 Трава', 'Низкая трава вокруг тебя, колышется на ветру. Густая — красивее, но тяжелее для телефона.', [['off', 'Выкл'], ['normal', 'Обычная'], ['dense', 'Густая']], LK.grass, function (v) { LK.setGrass(v); }));
+      if (!hd) b.appendChild(tog('Тени от солнца', 'Дома, деревья, машины и люди отбрасывают тени. Если тормозит — выключи.', LK.shadows, function () { LK.setShadows(!LK.shadows); renderPanel(); }));
+      b.appendChild(tog('Мягкий свет', 'Меньше рассеянного света — картинка не такая плоская и яркая.', LK.light, function () { LK.setLight(!LK.light); renderPanel(); }));
     }
     if (hd) {
       b.appendChild(H('Улучшенная графика'));
@@ -423,7 +430,7 @@
       r.appendChild(y); r.appendChild(n); b.appendChild(r);
     }
     b.appendChild(H('О версии'));
-    b.appendChild(el('div', 'hint', 'МГИАГ 1.18.0 «Новые дела». Настройки хранятся на этом устройстве и сохраняются между запусками.'));
+    b.appendChild(el('div', 'hint', 'МГИАГ 1.19.0 «Новые дела». Настройки хранятся на этом устройстве и сохраняются между запусками.'));
   }
   function resetAll() {
     var G = GFX(); if (G) { G.reset(); G.set('classic'); G.setOpt('distC', 1); G.setOpt('res', 1); }

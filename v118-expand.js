@@ -17,6 +17,7 @@
   var CELL = 14, GX0 = -1750, GZ0 = -1862, NX = 251, NZ = 263;      // сетка высот (кратна краю старой земли)
   var HG = null, KIND = null;                                       // высоты и тип клетки: 0 суша, 1 вода, 2 старый город
   var SEA_Y = -.55, DEEP = -.85;
+  function nearRoad(x, z, m) { if (m <= 11 && typeof roadDist === 'function') return roadDist(x, z) < m; return window.nearRoad(x, z, m); }
   function sm(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
   function rng(seed) { var s = seed >>> 0 || 1; return function () { s = (s + 0x6D2B79F5) >>> 0; var t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   var R = rng(118);
@@ -104,7 +105,7 @@
     { n: 'Южный проспект', w: 10, p: [[118.7, 669.8], [119, 770], [128, 890], [150, 1050], [200, 1150], [250, 1240]] },
     { w: 8, p: [[-167.9, 669.3], [-168, 770], [-190, 900], [-235, 1050], [-260, 1185]] }, { w: 8, p: [[465, 627.2], [465, 770], [478, 905], [500, 1060], [560, 1230]] },
     // юг: дачи и посёлок
-    { n: 'Дачная', w: 6, p: [[-720, 800], [-450, 805], [-168, 785], [119, 790], [465, 790], [730, 805]] },
+    { n: 'Дачная', w: 6, p: [[-797, 805], [-720, 800], [-450, 805], [-168, 785], [119, 790], [465, 790], [730, 805], [797, 808]] },
     { w: 6, p: [[-190, 900], [-30, 892], [128, 890], [300, 897], [478, 905]] },
     { w: 6, p: [[-235, 1050], [-45, 1058], [150, 1050], [320, 1060], [500, 1060], [700, 1005], [860, 960]] },
     { w: 6, p: [[-30, 892], [-45, 1058], [-40, 1150], [-20, 1225]] }, { w: 6, p: [[300, 897], [320, 1060], [330, 1150], [340, 1236]] },
@@ -113,12 +114,24 @@
     // север: озеро, кемпинг, термы, гора
     { n: 'Озёрная', w: 7, p: [[-425, -868], [-330, -945], [-150, -962], [0, -965], [150, -962], [330, -950], [478, -935]] },
     { w: 6, p: [[-150, -812], [-150, -962]] }, { w: 6, p: [[205, -830], [205, -962]] }, { w: 6, p: [[-640, -890], [-600, -1050], [-560, -1205]] },
-    { w: 6, p: [[478, -935], [474, -1000]] }, { w: 5, p: [[875, -560], [960, -740], [940, -900]] },
+    { w: 6, p: [[478, -935], [474, -1000]] }, { w: 5, p: [[875, -560], [960, -740], [940, -900], [840, -942]] },
     // запад: деревня у реки, винодельня, санаторий
-    { w: 5, p: [[-880, -640], [-900, -690], [-905, -735]] }, { w: 5, p: [[-900, 540], [-830, 620], [-800, 700]] }, { w: 6, p: [[-900, 1100], [-880, 990], [-820, 920]] },
+    { w: 5, p: [[-880, -640], [-900, -690], [-905, -735], [-880, -770], [-812, -795]] }, { w: 5, p: [[-900, 540], [-830, 620], [-797, 690]] }, { w: 6, p: [[-900, 1100], [-880, 990], [-820, 905], [-797, 830]] },
     // восток: порт и парк
-    { w: 6, p: [[866, -392], [930, -390], [980, -360]] }, { w: 6, p: [[905, 395], [960, 520], [980, 580]] }
+    { w: 6, p: [[866, -392], [930, -390], [955, -330], [950, -240], [915, -180], [866, -170]] }, { w: 6, p: [[905, 395], [960, 520], [980, 580]] },
+    // 1.19 — американский город: Сити и Мидтаун (запад), Портовая авеню (восток), улицы даунтауна (юг)
+    { n: 'Сити-авеню', w: 8, p: [[-797, -467], [-797, -150], [-797, 150], [-797, 390], [-797, 600], [-797, 805]] },
+    { n: 'Набережная Сити', w: 8, p: [[-860, -305], [-905, -250], [-912, -60], [-910, 140], [-890, 300], [-860, 390]] },
+    { w: 6, p: [[-797, -150], [-860, -150], [-910, -150]] }, { w: 6, p: [[-797, 60], [-861, 60], [-911, 60]] }, { w: 6, p: [[-797, 230], [-866, 230], [-900, 230]] },
+    { w: 6, p: [[-797, 560], [-850, 555], [-905, 548]] },
+    { n: 'Портовая авеню', w: 8, p: [[796, -390], [796, -5], [797, 392], [802, 600], [797, 808]] },
+    { w: 6, p: [[796, -200], [866, -190]] }, { w: 6, p: [[797, 200], [878, 215]] }, { w: 6, p: [[802, 600], [870, 610], [980, 580]] },
+    { w: 6, p: [[-212, 975], [0, 973], [131, 975], [300, 978], [490, 982]] }, { w: 6, p: [[-600, 805], [-625, 920], [-650, 1040]] }
   ];
+  // разворотные петли в конце дорог к маяку, термам и канатке: тупиков нет
+  function bulb(p, q, r) { var dx = p[0] - q[0], dz = p[1] - q[1], L = Math.hypot(dx, dz) || 1, cx = p[0] + dx / L * r, cz = p[1] + dz / L * r, a0 = Math.atan2(p[1] - cz, p[0] - cx), pts = [];
+    for (var k = 0; k <= 12; k++) { var a = a0 + k / 12 * PI * 2; pts.push([cx + Math.cos(a) * r, cz + Math.sin(a) * r]); } return { w: 6, loop: true, p: pts }; }
+  [[20, 9], [24, 14], [25, 14]].forEach(function (a) { var p = RD[a[0]].p, n = p.length; RD.push(bulb(p[n - 1], p[n - 2], a[1])); });
   var ROADPTS = [];                                                  // сглаженные линии дорог
   function smooth(p) { try { return catmull(p, 6); } catch (e) { return p; } }
   /* Дорожное полотно: высоты вдоль дороги сглаживаются (окно ±50 м), рельеф рядом подрезается/подсыпается к нему.
@@ -127,8 +140,11 @@
     var N = NX * NZ, BW = new Float32Array(N), BH = new Float32Array(N);
     function bil(x, z) { var fx = (x - GX0) / CELL, fz = (z - GZ0) / CELL, i = Math.max(0, Math.min(NX - 2, Math.floor(fx))), j = Math.max(0, Math.min(NZ - 2, Math.floor(fz))), u = fx - i, v = fz - j;
       return HG[idx(i, j)] * (1 - u) * (1 - v) + HG[idx(i + 1, j)] * u * (1 - v) + HG[idx(i, j + 1)] * (1 - u) * v + HG[idx(i + 1, j + 1)] * u * v; }
+    RD.forEach(function (r) { r.P = smooth(r.p); });
+    // концы дорог пристыковываются к ближайшей дороге (до 40 м), чтобы не было тупиков
+    RD.forEach(function (r) { snapEnds(r, 40); });
     RD.forEach(function (r) {
-      var P = smooth(r.p); r.P = P; ROADPTS.push(P);
+      var P = r.P; ROADPTS.push(P);
       var S_ = samplePath(P, 4), raw = S_.map(function (p) { var x = p[0], z = p[1]; if (!outside(x, z)) return 0; var dsq = Math.hypot(Math.max(0, Math.abs(x) - SQ), Math.max(0, Math.abs(z) - SQ));
         if (isWater(x, z)) r.bridge = true; return Math.max(bil(x, z), sm(0, 40, dsq)); });
       var prof = raw.map(function (h, i) { var s = 0, n = 0; for (var k = -12; k <= 12; k++) { var q = raw[Math.max(0, Math.min(raw.length - 1, i + k))]; s += q; n++; } return s / n; });
@@ -143,6 +159,9 @@
     for (var q = 0; q < N; q++) if (BW[q] > 0) HG[q] = HG[q] + (BH[q] - HG[q]) * BW[q];
   }
   /* точки через равные отрезки по длине линии (для фонарей, домов, разметки) */
+  function snapEnds(r, maxD) { if (r.loop || r.ring) return; [0, 1].forEach(function (end) { var P = r.P, p = end ? P[P.length - 1] : P[0], best = null, bd = 2.5;
+        RD.forEach(function (o) { if (o === r) return; var Q = o.P; for (var i = 0; i < Q.length - 1; i++) { var ax = Q[i][0], az = Q[i][1], dx = Q[i + 1][0] - ax, dz = Q[i + 1][1] - az, L2 = dx * dx + dz * dz || 1, u = Math.max(0, Math.min(1, ((p[0] - ax) * dx + (p[1] - az) * dz) / L2)), qx = ax + dx * u, qz = az + dz * u, d = Math.hypot(p[0] - qx, p[1] - qz); if (d < maxD && (best === null || d < bd)) { bd = d; best = [qx, qz]; } } });
+        if (best && bd > .5) { if (end) P.push(best); else P.unshift(best); r.snapped = (r.snapped || 0) + 1; } }); }
   function resample(P, step) { var out = [P[0]], acc = 0, need = step; for (var i = 1; i < P.length; i++) { var ax = P[i - 1][0], az = P[i - 1][1], bx = P[i][0], bz = P[i][1], L = Math.hypot(bx - ax, bz - az), t0 = 0;
       while (acc + L * (1 - t0) >= need) { var t = t0 + (need - acc) / L; out.push([ax + (bx - ax) * t, az + (bz - az) * t]); acc = need; t0 = t; need += step; } acc += L * (1 - t0); } if (out.length < 2 || Math.hypot(out[out.length - 1][0] - P[P.length - 1][0], out[out.length - 1][1] - P[P.length - 1][1]) > step * .3) out.push(P[P.length - 1]); return out; }
   function samplePath(pts, step) { var P = []; for (var i = 0; i < pts.length - 1; i++) { var ax = pts[i][0], az = pts[i][1], bx = pts[i + 1][0], bz = pts[i + 1][1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / step)); for (var k = 0; k < n; k++) P.push([ax + (bx - ax) * k / n, az + (bz - az) * k / n]); } P.push(pts[pts.length - 1]); return P; }
@@ -156,7 +175,7 @@
       var pos = [], col = [], ix = [], map = {}, cnt = 0;
       function vtx(i, j) { var k = idx(i, j); if (map[k] !== undefined) return map[k]; var x = GX0 + i * CELL, z = GZ0 + j * CELL, h = HG[k]; pos.push(x, h, z);
         var c, dw = E.DW[k], n = .92 + .08 * Math.sin(x * .21 + z * .13);
-        if (KIND[k] === 1 || h < .2 || (dw <= 2 && KIND[k] === 0)) c = sand; else if (h > 32) c = rock; else if (z < -740 || (x < -800 && z < 400)) c = dark; else if (Math.pow((x + 930) / 190, 2) + Math.pow((z - 560) / 200, 2) < 1) c = vine; else c = gc;
+        if (KIND[k] === 1 || (h < .2 && dw <= 4) || (dw <= 2 && KIND[k] === 0)) c = sand; else if (h > 32) c = rock; else if (z < -740) c = dark;  else c = gc;
         col.push(c.r / gc.r * n, c.g / gc.g * n, c.b / gc.b * n); map[k] = cnt; return cnt++; }
       for (var j = tj; j < Math.min(NZ - 1, tj + TERRAIN_TILE); j++) for (var i = ti; i < Math.min(NX - 1, ti + TERRAIN_TILE); i++) {
         var a = idx(i, j), b = idx(i + 1, j), c_ = idx(i, j + 1), d = idx(i + 1, j + 1);
@@ -171,15 +190,32 @@
     }
     E.stats.tiles = made;
   }
+  /* Шов на месте бывшего забора: полоса земли под стыком старой и новой земли (закрывает любые щели),
+     а старые плитки земли у края больше не прячутся по дальности — иначе издалека под ними видно море. */
+  function seam(root) {
+    var pos = [], ix = [], n = 0, ACR = [-724, -734, -740, -744, -750, -760];
+    for (var side = 0; side < 4; side++) for (var t = -760; t < 760; t += 4) {
+      for (var k = 0; k < ACR.length; k++) for (var e = 0; e < 2; e++) { var tt = t + e * 4, a = ACR[k], x, z;
+        if (side === 0) { x = -a; z = tt; } else if (side === 1) { x = a; z = tt; } else if (side === 2) { x = tt; z = -a; } else { x = tt; z = a; }
+        var h = outside(x, z) ? gridH(x, z) : oH(x, z); pos.push(x, Math.min(h, oH(x, z)) - .07, z); }
+      var b = n; for (k = 0; k < ACR.length - 1; k++) { var i0 = b + k * 2, i1 = i0 + 1, j0 = b + (k + 1) * 2, j1 = j0 + 1; ix.push(i0, j0, i1, i1, j0, j1, i0, i1, j0, i1, j1, j0); } n += ACR.length * 2;
+    }
+    var gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); var cl = []; for (var q = 0; q < pos.length / 3; q++) cl.push(.92, .97, .9); gg.setAttribute('color', new THREE.Float32BufferAttribute(cl, 3)); gg.setIndex(ix); gg.computeVertexNormals();
+    var m = new THREE.Mesh(gg, groundMat); m.userData.noPerf = true; m.userData.noCull = true; m.userData.noShadow = true; m.frustumCulled = false; root.add(m); E.seam = m;
+  }
+  function oldTilesKeep(on) {
+    try { CULL.forEach(function (k) { if (k.o.material !== groundMat || !k.o.userData.cull) return; var c = k.c; if (Math.max(Math.abs(c.x), Math.abs(c.z)) < 560) return; if (on) { if (k.r0 === undefined) { k.r0 = k.r; k.r = 1e5; } } else if (k.r0 !== undefined) { k.r = k.r0; delete k.r0; } }); } catch (e) { }
+  }
   function water(root) {
     var m = new THREE.MeshPhongMaterial({ color: 0x2f74a6, specular: 0x88aacc, shininess: 40 });
     var R_ = [[-6000, 6000, -6000, -SQ], [-6000, 6000, SQ, 6000], [-6000, -SQ, -SQ, SQ], [SQ, 6000, -SQ, SQ]];
     E.water = R_.map(function (r) { var w = r[1] - r[0], d = r[3] - r[2], p = new THREE.Mesh(new THREE.PlaneGeometry(w, d, 1, 1), m); p.rotation.x = -PI / 2; p.position.set((r[0] + r[1]) / 2, SEA_Y, (r[2] + r[3]) / 2); p.userData.noPerf = true; p.userData.exWater = true; root.add(p);
       try { if (window.MG_GFX && MG_GFX.registerWater) MG_GFX.registerWater(p, m); } catch (e) { } return p; });
   }
-  function roadsBuild() {
+  function roadsBuild() { RD.forEach(buildRoad); }
+  function buildRoad(r) {
     var yo = .22;
-    RD.forEach(function (r) {
+    (function () {
       var P = r.P; ROADS.push({ pts: P, w: r.w, ex: true });
       ribbon(P, r.w, roadMat, yo);
       if (r.w >= 6) { ribbon(P, 2.6, walkMat, yo + .04, r.w / 2 + 1.4); ribbon(P, 2.6, walkMat, yo + .04, -r.w / 2 - 1.4); }
@@ -193,10 +229,10 @@
         for (var s = -1; s <= 1; s += 2) { var x = p[0] + Math.cos(a) * (r.w / 2 + .4) * s, z = p[1] - Math.sin(a) * (r.w / 2 + .4) * s; M_(cityG, G.box, 0xb8bcc4, [.25, .9, 3.1], [x, 1.7, z], [0, a, 0]); }
         if (i % 4 === 0) M_(cityG, G.cyl, 0x8a8f96, [1.4, 3, 1.4], [p[0], -.5, p[1]]); }); }
       if (r.n) { var m = P[Math.floor(P.length / 2)]; E.lm.push({ x: m[0], z: m[1], e: '🛣️', n: r.n }); }
-    });
+    })();
   }
   /* --- проверки места --- */
-  function onLand(x, z, r) { for (var a = 0; a < 8; a++) { var px = x + Math.cos(a * PI / 4) * r, pz = z + Math.sin(a * PI / 4) * r; if (!outside(px, pz) || isWater(px, pz) || gridH(px, pz) < .5) return false; } return outside(x, z) && !isWater(x, z); }
+  function onLand(x, z, r) { for (var a = 0; a < 8; a++) { var px = x + Math.cos(a * PI / 4) * r, pz = z + Math.sin(a * PI / 4) * r; if (!outside(px, pz) || isWater(px, pz) || gridH(px, pz) < -.2) return false; } return outside(x, z) && !isWater(x, z); }
   function flatEnough(x, z, r) { var mn = 1e9, mx = -1e9; for (var a = 0; a < 8; a++) { var h = gridH(x + Math.cos(a * PI / 4) * r, z + Math.sin(a * PI / 4) * r); mn = Math.min(mn, h); mx = Math.max(mx, h); } return mx - mn < Math.max(3, r * .6); }
   function okSpot(x, z, r, road) { return onLand(x, z, r) && flatEnough(x, z, r) && !nearRoad(x, z, r + (road === undefined ? 3 : road)) && freeAt(x, z, r); }
   E.okSpot = okSpot;
@@ -228,18 +264,18 @@
 
   /* ====================== ЗОНЫ ====================== */
   function zoneSouth() {
-    // дачный склон → гостевые домики
-    [13, 18, 19].forEach(function (ri) { streetHouses(ri, 14, 9, function (x, z, ry) { var w = rr_(6, 9), d = rr_(6, 8); house(x, z, w, d, rr_(3, 6), ry, R() < .5 ? 'wood' : 'panel', { color: R() < .5 ? pk(PASTEL) : undefined, pitched: rr_(1.8, 2.6), doors: 1 }); }); });
-    // посёлок «Чэайное»: площадь, улицы, отели
-    var C = [225, 975]; E.lm.push({ x: C[0], z: C[1], e: '🫖', n: 'Посёлок «Чэайное»' });
+    // город «Чэайное»: площадь с фонтаном (кварталы вокруг строит модуль города)
+    var C = [225, 975]; E.lm.push({ x: C[0], z: C[1], e: '🫖', n: 'Город «Чэайное» · площадь' });
     try { var y = H(C[0], C[1]); M_(cityG, G.cyl, 0xd8d0c0, [9, .6, 9], [C[0], y + .3, C[1]]); M_(cityG, G.cyl, 0x4aa0d8, [7.6, .1, 7.6], [C[0], y + .62, C[1]]); M_(cityG, G.cyl, 0xd8d0c0, [1, 3.4, 1], [C[0], y + 1.7, C[1]]); addColC(C[0], C[1], 4.6, y + .7);
       signH('ЧЭАЙНОЕ', 6, 1.2, C[0], 5.2, C[1] - 6, 0, '#ffb15a', '#ffffff', { fs: .8 }); [-2.6, 2.6].forEach(function (dx) { var px = C[0] + dx, pz = C[1] - 6.1, py = H(px, pz); M_(cityG, G.box, 0x8a6a48, [.2, 5.6, .2], [px, py + 2.8, pz]); addColC(px, pz, .15, py + 5); }); } catch (e) { }
     for (var a = 0; a < 8; a++) { var px = C[0] + Math.cos(a / 8 * TAU_) * 12, pz = C[1] + Math.sin(a / 8 * TAU_) * 12; if (okSpot(px, pz, 1, 2)) palm(px, pz, 1.1); }
-    [10, 11, 12, 14, 15, 16, 17].forEach(function (ri) { streetHouses(ri, 15, 12.5, function (x, z, ry, i) { if (Math.hypot(x - C[0], z - C[1]) < 26) return; var h = Math.hypot(x - C[0], z - C[1]) < 160 ? rr_(9, 21) : rr_(6, 12); house(x, z, rr_(10, 16), rr_(9, 13), h, ry, R() < .7 ? 'panel' : 'new', { color: pk(PASTEL), shops: h > 8, doors: 1 }); }); });
     // набережная: пальмы, фонари, скамейки, ларьки, зонтики на пляже, пирс
     var prom = []; for (var x = -320; x <= 780; x += 14) { var cz = coastS(x) - 46; if (!isWater(x, cz) && outside(x, cz)) prom.push([x, cz]); else if (prom.length > 4) break; }
     if (prom.length > 4) {
-      RD.push({ n: 'Набережная', w: 6, p: prom.filter(function (p, i) { return i % 4 === 0; }), P: null }); var pr = RD[RD.length - 1]; pr.P = smooth(pr.p); ROADPTS.push(pr.P);
+      RD.push({ n: 'Набережная', w: 6, p: prom.filter(function (p, i) { return i % 4 === 0; }), P: null }); var pr = RD[RD.length - 1]; pr.P = smooth(pr.p); snapEnds(pr, 80); ROADPTS.push(pr.P);
+      // если конец набережной не дошёл до дороги — короткая улица к ближайшей
+      [pr.P[0], pr.P[pr.P.length - 1]].forEach(function (p) { var best = null, bd = 1e9; RD.forEach(function (o) { if (o === pr || !o.P) return; o.P.forEach(function (q) { var d = Math.hypot(q[0] - p[0], q[1] - p[1]); if (d < bd) { bd = d; best = q; } }); });
+        if (best && bd > 3 && bd < 320) { var cn = { w: 6, p: [p, best], P: [p, best] }; RD.push(cn); buildRoad(cn); } });
       ROADS.push({ pts: pr.P, w: 6, ex: true }); ribbon(pr.P, 9, walkMat, .26); E.lm.push({ x: 250, z: coastS(250) - 46, e: '🌴', n: 'Набережная' });
       alongRoad(pr.P, 14, function (x, z, a, s, i) { var o = 6.4 * s, px = x + Math.cos(a) * o, pz = z - Math.sin(a) * o; if (s > 0 && i % 2 === 0 && okSpot(px, pz, .6, 1)) palm(px, pz, rr_(.9, 1.25)); else if (s < 0 && i % 3 === 0 && okSpot(px, pz, .6, 1)) lampH(px, pz, a + PI / 2); else if (s < 0 && i % 5 === 1 && okSpot(px, pz, 1, .5)) benchH(px, pz, a + PI / 2); });
       alongRoad(pr.P, 70, function (x, z, a, s, i) { if (s > 0) return; var o = -13, px = x + Math.cos(a) * o, pz = z - Math.sin(a) * o; if (okSpot(px, pz, 2.4, 1)) kiosk(px, pz, a + PI, pk(['🍦', '🌽', '🥤', '🍉', '🫖']), pk(['МОРОЖЕНОЕ', 'КУКУРУЗА', 'ЧЭАЙ', 'АРБУЗЫ'])); });
@@ -260,7 +296,7 @@
     // маяк
     lighthouse(934, 1480);
     // пальмы и деревья по югу
-    for (k = 0; k < 260; k++) { var tx = rr_(-760, 1000), tz = rr_(760, 1300); if (okSpot(tx, tz, 1, 2)) { if (tz > 980) palm(tx, tz, rr_(.8, 1.2)); else treeH(tx, tz, rr_(.9, 1.3)); } }
+    for (k = 0; k < 160; k++) { var tx = rr_(-760, 1000), tz = rr_(1150, 1350); if (okSpot(tx, tz, 1, 2)) palm(tx, tz, rr_(.8, 1.2)); }
   }
   function lighthouse(x, z) {
     if (!onLand(x, z, 3)) { for (var r = 0; r < 120 && !onLand(x, z, 3); r += 6) { x -= Math.cos(1.02) * 6; z -= Math.sin(1.02) * 6; } }
@@ -327,11 +363,7 @@
     for (var k = 0; k < 120 && n < 16; k++) { var x = V[0] + rr_(-90, 90), z = V[1] + rr_(-120, 120); if (house(x, z, rr_(6, 9), rr_(6, 8), rr_(3, 5), rr_(0, PI), 'wood', { pitched: 2, doors: 1 })) n++; }
     for (k = 0; k < 6; k++) { var bx = -965 - k * 4, bz = -640 - k * 22; if (isWater(bx, bz)) boat(bx, bz, .4 + k * .2); }
     E.lm.push({ x: V[0], z: V[1], e: '🎣', n: 'Рыбацкая деревня' });
-    // виноградники: ряды лоз на склоне
-    var Vc = [-930, 560], rows = 0;
-    for (var rz = -150; rz <= 150; rz += 7) { for (var rx = -150; rx <= 150; rx += 28) { var px = Vc[0] + rx, pz = Vc[1] + rz; if (!onLand(px, pz, 2) || nearRoad(px, pz, 3) || !freeAt(px, pz, 1)) continue; M_(cityG, G.box, 0x4f7a2a, [22, 1.1, .9], [px, H(px, pz) + .55, pz]); rows++; } }
-    E.stats.vines = rows; house(Vc[0] + 60, Vc[1] - 160, 18, 12, 8, .2, 'brick', { doors: 1 }); E.lm.push({ x: Vc[0], z: Vc[1], e: '🍇', n: 'Виноградники' });
-    for (k = 0; k < 200; k++) { var tx = rr_(-1100, -760), tz = rr_(-1000, 900); if (okSpot(tx, tz, 1.2, 2.5)) { if (tz < -300) pine(tx, tz, rr_(.9, 1.3)); else treeH(tx, tz, rr_(.9, 1.3)); } }
+    for (k = 0; k < 120; k++) { var tx = rr_(-1100, -760), tz = rr_(-1000, -560); if (okSpot(tx, tz, 1.2, 2.5)) pine(tx, tz, rr_(.9, 1.3)); }
   }
   function zoneEast() {
     // порт у бухты
@@ -344,24 +376,23 @@
     E.lm.push({ x: 930, z: -880, e: '🪨', n: 'Скалистый берег' });
     // парк аттракционов
     amusement(960, 600);
-    for (k = 0; k < 180; k++) { var tx = rr_(760, 1100), tz = rr_(-700, 900); if (okSpot(tx, tz, 1.2, 2.5)) { if (tz > 300) palm(tx, tz, rr_(.8, 1.1)); else treeH(tx, tz, rr_(.9, 1.3)); } }
+    for (k = 0; k < 40; k++) { var tx = rr_(880, 1100), tz = rr_(480, 760); if (okSpot(tx, tz, 1.2, 2.5)) palm(tx, tz, rr_(.8, 1.1)); }
   }
   /* Посёлки вдоль выездов и кольца (плавный переход от пригорода), дачи у озера, портовый посёлок и лес на пустых местах */
   function zoneFill() {
     var dacha = function (x, z, ry) { house(x, z, rr_(6, 9), rr_(6, 8), rr_(3, 5.5), ry, R() < .55 ? 'wood' : 'panel', { color: R() < .5 ? pk(PASTEL) : undefined, pitched: rr_(1.6, 2.4), doors: 1 }); };
-    [1, 2, 3, 4, 5, 6, 7, 8, 9].forEach(function (ri) { streetHouses(ri, 15, 9, function (x, z, ry) { if (!outside(x, z) || R() < .25) return; dacha(x, z, ry); }); });
+    [1, 2, 3].forEach(function (ri) { streetHouses(ri, 15, 9, function (x, z, ry) { if (!outside(x, z) || R() < .25) return; dacha(x, z, ry); }); });
     streetHouses(0, 18, 9, function (x, z, ry) {
-      if (R() < (z > 950 ? .2 : .55)) return;                                       // на юге и так посёлок
-      if (z < -700 && x > 250 && x < 700) return;                                  // у подножия горы — лес
+      if (!(z < -742 && x < 250) || R() < .45) return;                            // дачи только в пригороде (север); остальное — город
       dacha(x, z, ry);
     });
     streetHouses(21, 16, 9.5, function (x, z, ry) { if (R() < .35) return; house(x, z, rr_(7, 10), rr_(6, 8), rr_(3, 5), ry, 'wood', { pitched: rr_(2, 2.8), doors: 1 }); });
-    [4, 5, 6, 30].forEach(function (ri) { streetHouses(ri, 16, 11.5, function (x, z, ry) { if (!outside(x, z) || R() < .3) return; house(x, z, rr_(8, 14), rr_(7, 10), rr_(4, 9), ry, R() < .5 ? 'brick' : 'panel', { doors: 1, shops: R() < .3 }); }); });
     // лес: на севере сосны, посередине лиственные, на юге пальмы; гуще в бору и на северо-западе
     var n = 0;
     for (var k = 0; k < 2600 && n < 1300; k++) {
       var x = rr_(-1500, 1500), z = rr_(-1650, 1500); if (!outside(x, z) || isWater(x, z)) continue;
       var dense = (x < -500 && z < -900) || (x > 600 && z < -700) || (Math.hypot(x + 900, z - 1000) < 200) || (z < -760 && z > -1000);
+      if (!(z < -742 || Math.hypot(x + 900, z - 1000) < 220 || (z > 1150 && x > -700))) continue;   // лес — только в пригороде, у санатория и у моря
       if (!dense && R() < .55) continue;
       if (!okSpot(x, z, 1.2, 4)) continue;
       if (z < -600) pine(x, z, rr_(.9, 1.5)); else if (z > 1000 && x > -700) palm(x, z, rr_(.8, 1.2)); else treeH(x, z, rr_(.9, 1.4));
@@ -455,6 +486,7 @@
       for (var j = 0; j < NZ; j++) for (var i = 0; i < NX; i++) { var k = idx(i, j); if (KIND[k] === 1 || HG[k] < -.3) continue;
         var h = HG[k]; g.fillStyle = h > 32 ? '#b9b2a4' : (E.DW[k] <= 1 ? '#e6d8b0' : '#cfd6c4'); g.fillRect(X(GX0 + i * CELL - CELL / 2) - ox, Z(GZ0 + j * CELL - CELL / 2) - oz, c, c); }
       g.fillStyle = '#9a948a'; (E.rects || []).forEach(function (r) { g.fillRect(X(r[0]) - ox, Z(r[1]) - oz, Math.max(1, r[2] * s0), Math.max(1, r[3] * s0)); });
+      ((window.MG_CITY && MG_CITY.rects) || []).forEach(function (r) { g.save(); g.fillStyle = r[5] - H(r[0], r[1]) > 40 ? '#6f7a88' : '#9a948a'; g.translate(X(r[0]) - ox, Z(r[1]) - oz); g.rotate(-r[4]); g.fillRect(-r[2] * s0 / 2, -r[3] * s0 / 2, Math.max(1, r[2] * s0), Math.max(1, r[3] * s0)); g.restore(); });
       g.strokeStyle = '#ffffff'; g.lineCap = 'round'; g.lineJoin = 'round';
       RD.forEach(function (r) { if (!r.P) return; g.lineWidth = Math.max(2, r.w * s0 * .9); g.beginPath(); r.P.forEach(function (p, n) { n ? g.lineTo(X(p[0]) - ox, Z(p[1]) - oz) : g.moveTo(X(p[0]) - ox, Z(p[1]) - oz); }); g.stroke(); });
       g.fillStyle = '#9a7048'; DECKS.forEach(function (d) { g.fillRect(X(d.x0) - ox, Z(d.z0) - oz, Math.max(1, (d.x1 - d.x0) * s0), Math.max(1, (d.z1 - d.z0) * s0)); });
@@ -479,11 +511,13 @@
     cutFind();                                                       // до постройки: искать только среди старого
     var g = new THREE.Group(); g.userData.expand = true; g.userData.noPerf = true; E.g = g;
     var n0 = cityG.children.length, c0 = cols.length, i0 = inters.length, tr0 = TRAFFIC.length, lm0 = LAMPS.length, mr0 = MAPRECTS.length;
-    terrain(g); water(g);
+    terrain(g); water(g); try { seam(g); } catch (e) { console.error('[EXPAND seam]', e); }
     var BA0 = BA; BA = 'city'; var R0 = R13; R13 = rng(1180);
     try {
-      roadsBuild();
-      [zoneSouth, zoneNorth, zoneWest, zoneEast, zoneFill].forEach(function (z) { try { z(); } catch (e) { console.error('[EXPAND zone]', z.name, e); E.stats.zoneErr = (E.stats.zoneErr || []).concat(z.name + ': ' + e.message); } });
+      roadsBuild(); try { buildRoadIndex(); } catch (e) { }
+      E.api = { R: R, rr: rr_, pk: pk, okSpot: okSpot, onLand: onLand, flatEnough: flatEnough, isWater: isWater, gridH: gridH, outside: outside, RD: RD, resample: resample, alongRoad: alongRoad, palm: palm, pine: pine, umbrella: umbrella, lm: E.lm, stats: E.stats, PASTEL: PASTEL, SQ: SQ, coastS: coastS, boat: boat };
+      var zoneCity = function () { try { buildRoadIndex(); } catch (e) { } if (window.MG_CITY) MG_CITY.build(E.api); };
+      [zoneSouth, zoneNorth, zoneWest, zoneEast, zoneCity, zoneFill].forEach(function (z) { try { z(); } catch (e) { console.error('[EXPAND zone]', z.name, e); E.stats.zoneErr = (E.stats.zoneErr || []).concat(z.name + ': ' + e.message); } });
       try { registerParked(); } catch (e) { }
       [0, 0, 0, 10, 13, 21].forEach(function (ri, k) { try { addTraffic(k % 2 ? RD[ri].P.slice().reverse() : RD[ri].P, pk(CAR_COLS)); } catch (e) { } });
     } finally { BA = BA0; R13 = R0; }
@@ -529,7 +563,7 @@
       try { buildRoadGraph(); } catch (e) { } try { if (typeof buildRoadIndex === 'function') buildRoadIndex(); } catch (e) { }
       try { mapBase = null; } catch (e) { } radarHook();
     }
-    cutSet(on);
+    cutSet(on); oldTilesKeep(on); try { if (window.MG_LOOK && MG_LOOK.refreshGrass) MG_LOOK.refreshGrass(); } catch (e) { }
     // первый раз: подсказать, что забора больше нет (когда закончатся титры и сцены)
     try { if (on && E.force === null && !(S.p13 && S.p13.exSeen)) { S.p13 = S.p13 || {}; S.p13.exSeen = true; try { saveGame(); } catch (e) { }
       var tip = setInterval(function () { try { if (started && area === 'city' && !blocked()) { clearInterval(tip); setTimeout(function () { toast('🏝️ Забора больше нет. За городом — целый полуостров: озеро и гора на севере, порт и парк на востоке, река и деревня на западе, посёлок «Чэайное» и море на юге.', 7000); }, 2500); } } catch (e) { clearInterval(tip); } }, 1000); } } catch (e) { }
@@ -565,6 +599,7 @@
     // анимации: колесо, карусель, луч маяка, кабинки канатки, лодки
     if (E.wheel) { E.wheel.rotation.z = t * .05; (E.wheelCabs || []).forEach(function (cb) { cb.rotation.z = -t * .05; }); }
     if (E.carousel) E.carousel.rotation.y = t * .6;
+    try { if (window.MG_CITY && MG_CITY.tick) MG_CITY.tick(dt); } catch (e) { }
     if (E.beam) E.beam.rotation.y = t * .8;
     if (E.cabins && E.cable) { var T_ = E.cable, n = T_.length - 1; E.cabins.forEach(function (cb) { var u = ((t * .01 * cb.dir + cb.t) % 1 + 1) % 1, f = u * n, i = Math.min(n - 1, Math.floor(f)), w = f - i, a = T_[i], b = T_[i + 1]; cb.g.position.set(a[0] + (b[0] - a[0]) * w + (cb.dir > 0 ? 1.2 : -1.2), a[1] + (b[1] - a[1]) * w, a[2] + (b[2] - a[2]) * w); }); }
     (E.boats || []).forEach(function (b) { b.g.position.y = SEA_Y + .1 + Math.sin(t * 1.3 + b.ph) * .12; b.g.rotation.z = Math.sin(t * .9 + b.ph) * .03; });

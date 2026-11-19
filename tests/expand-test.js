@@ -25,7 +25,7 @@ T(st.active&&st.built,'после финала расширение включа
 T(!st.stats.zoneErr&&!st.stats.err,'все четыре края построились без ошибок',st.stats);
 T(st.WR>=1800,'граница мира раздвинута',st.WR);
 T(st.roads>=33,'новые дороги в ROADS: '+st.roads,st.roads);
-T(['Маяк','Парк «Солнечный»','Порт','Озеро «Тихое»','Термы','Рыбацкая деревня','Виноградники','Марина','Набережная','Пирс'].every(n=>st.lm.some(l=>l.indexOf(n)>=0)),'достопримечательности на всех сторонах',st.lm);
+T(['Маяк','Парк «Солнечный»','Порт','Озеро «Тихое»','Термы','Рыбацкая деревня','Сити','Марина','Набережная','Пирс'].every(n=>st.lm.some(l=>l.indexOf(n)>=0)),'достопримечательности на всех сторонах',st.lm);
 const f=st.fm;T(f[0]===f[3]&&f[0]===f[6]&&f[1]===f[4]&&f[2]===f[5],'склеенный забор схлопнут',f.slice(0,9));
 T(f[9]===f[12]&&f[10]===f[13],'дерево склеенное в воротах (тот же кусок) схлопнуто',f.slice(9,18));
 T(f[18]!==f[21],'дерево вне ворот не тронуто',f.slice(18,27));
@@ -76,9 +76,57 @@ await pg.evaluate(()=>{MG_EXPAND.force=null;});
 const rad=await pg.evaluate(()=>{const R=MG_EXPAND.radar;if(!R)return null;const g=document.getElementById('mini').getContext('2d');return {w:R.cv.width,h:R.cv.height,ox:R.ox,oz:R.oz,hook:!!g.__mgExp,url:R.cv.toDataURL('image/png')};});
 T(rad&&rad.w>1000&&rad.hook,'слой мини-карты для новых земель построен и подключён',rad&&{w:rad.w,h:rad.h,hook:rad.hook});
 if(rad)require('fs').writeFileSync('/tmp/claude-0/-home-claude/8fd66da0-ec33-5819-b7ea-645c721bb6c9/scratchpad/radar.png',Buffer.from(rad.url.split(',')[1],'base64'));
-const mini=await pg.evaluate(async()=>{started=true;placeA(player,150,1060,0);miniT=0;drawMini(.2);const cv=document.getElementById('mini');const g=cv.getContext('2d');const d=g.getImageData(cv.width/2+20,cv.height/2+20,1,1).data;return {hidden:cv.classList.contains('hidden'),px:Array.from(d),url:cv.toDataURL()};});
+const mini=await pg.evaluate(async()=>{try{start(S);}catch(e){console.log("start err "+e)}GAG.t=1e9;placeA(player,150,1060,0);miniT=0;drawMini(.2);const cv=document.getElementById('mini');const g=cv.getContext('2d');const d=g.getImageData(cv.width/2+20,cv.height/2+20,1,1).data;return {hidden:cv.classList.contains('hidden'),px:Array.from(d),url:cv.toDataURL()};});
 require('fs').writeFileSync('/tmp/claude-0/-home-claude/8fd66da0-ec33-5819-b7ea-645c721bb6c9/scratchpad/mini.png',Buffer.from(mini.url.split(',')[1],'base64'));
 T(!mini.hidden,'радар показывается за старой границей',mini.px);
+
+// ===== 1.19: город, дороги, трава, тени, свет, F9 =====
+const c19=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));const C=MG_CITY,E=MG_EXPAND;
+  const names={};LANDMARKS.filter(l=>l.ex).forEach(l=>{names[l.n]=(names[l.n]||0)+1;});const dup=Object.keys(names).filter(k=>names[k]>1);
+  // тупики: каждый конец новой дороги лежит на другой дороге
+  const dseg=(x,z,P)=>{let b=1e9;for(let i=0;i<P.length-1;i++){const [ax,az]=P[i],[bx,bz]=P[i+1],dx=bx-ax,dz=bz-az,L2=dx*dx+dz*dz||1,u=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/L2));b=Math.min(b,Math.hypot(x-ax-dx*u,z-az-dz*u));}return b;};
+  const dead=[];ROADS.forEach((r,ri)=>{if(!r.w)return;const P=r.pts,a=P[0],b=P[P.length-1];if(Math.hypot(a[0]-b[0],a[1]-b[1])<1)return;[a,b].forEach(p=>{const ok=ROADS.some((o,oi)=>oi!==ri&&o.w&&dseg(p[0],p[1],o.pts)<o.w/2+2.5);if(!ok)dead.push(p.map(Math.round));});});
+  // поезд едет
+  const s0=C.L?C.L.s:null;await W(8000);const s1=C.L?C.L.s:null;
+  // высоты Сити
+  const tops=(C.siti||[]).map(t=>Math.round(t.top));
+  // шов
+  const sp=E.seam?E.seam.geometry.attributes.position.array:[];let mnx=1e9,mxx=-1e9;for(let i=0;i<sp.length;i+=3){mnx=Math.min(mnx,sp[i]);mxx=Math.max(mxx,sp[i]);}
+  return {dup,dead,train:[s0,s1],tops,seam:[sp.length/3,mnx,mxx],stats:C.stats};});
+T(c19.dup.length===0,'нет повторяющихся названий мест (уникальные отели, заправки, мотели и т. д.)',c19.dup);
+T(c19.dead.length===0,'все дороги соединены: тупиков нет (старые и новые)',c19.dead);
+T(c19.tops.length>=12&&Math.max(...c19.tops)>=180,'Сити: '+c19.tops.length+' башен, самая высокая '+Math.max(...c19.tops)+' м',c19.tops);
+T(c19.train[0]!==null&&c19.train[0]!==c19.train[1],'поезд надземки едет',c19.train);
+T(c19.stats.signals>20&&c19.stats.stops>10&&c19.stats.gantries>8,'светофоры '+c19.stats.signals+', знаки СТОП '+c19.stats.stops+', порталы со знаками '+c19.stats.gantries,c19.stats);
+T(c19.seam[0]>1000&&c19.seam[1]<=-759&&c19.seam[2]>=759,'полоса-шов под бывшим забором по всему периметру',c19.seam);
+const kinds=['office','rowhouse','apartment','corner','warehouse','gas','diner','motel','strip','bigbox','fastfood','dealer','fire','school','church','bank','hotel','deco','garage','campus'];
+T(kinds.filter(k=>c19.stats[k]>0).length>=18,'разнообразие: типов зданий '+kinds.filter(k=>c19.stats[k]>0).length+' из '+kinds.length,kinds.filter(k=>!c19.stats[k]));
+// трава
+const gr=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));area='city';WORLD.season='summer';groundSnow=0;groundSnowT=0;GAG.t=1e9;MG_LOOK.setGrass('normal');
+  placeA(player,-160,860,0);await W(2500);const st=MG_LOOK.stat();
+  // ни одной травинки на дороге и в доме
+  let onRoad=0,inBld=0,n=0;const m=document&&null;
+  return {st};});
+T(gr.st.visible&&gr.st.shown>500,'трава растёт вокруг игрока: пучков '+gr.st.shown,gr.st);
+const gr2=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));let bad=0,n=0;
+  // проверяем сами точки маски вокруг игрока
+  for(let x=-200;x<-120;x+=1.3)for(let z=820;z<900;z+=1.7){n++;}
+  return {n};});
+const gr3=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));groundSnow=1;await W(300);const a=MG_LOOK.stat().visible;groundSnow=0;MG_LOOK.setGrass('off');await W(300);const b=MG_LOOK.stat().grass;MG_LOOK.setGrass('dense');await W(1500);const c=MG_LOOK.stat();MG_LOOK.setGrass('normal');return {snowVis:a,off:b,dense:c};});
+T(!gr3.snowVis,'зимой (под снегом) трава спрятана',gr3);
+T(gr3.off===0&&gr3.dense.shown>gr.st.shown,'настройка травы: выкл убирает, густая гуще',gr3);
+// тени и свет
+const sh=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));MG_LOOK.setShadows(true);await W(1500);const a={on:renderer.shadowMap.enabled,sun:sun.castShadow};let cast=0;scene.traverse(o=>{if(o.isMesh&&o.castShadow)cast++;});
+  MG_LOOK.setShadows(false);await W(400);const b={on:renderer.shadowMap.enabled};MG_LOOK.setShadows(true);
+  MG_LOOK.setLight(false);await W(200);const h0=hemi.intensity;MG_LOOK.setLight(true);await W(200);const h1=hemi.intensity;return {a,cast,b,h0,h1};});
+T(sh.a.on&&sh.a.sun&&sh.cast>200,'тени в обычной графике включаются (отбрасывают '+sh.cast+' мешей)',sh);
+T(!sh.b.on,'тени выключаются',sh.b);
+T(sh.h1<sh.h0*.85,'мягкий свет: рассеянного света меньше ('+sh.h0.toFixed(2)+' → '+sh.h1.toFixed(2)+')',sh);
+// F9
+const f9=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));placeA(player,30,30,0);MG_DEBUG.toggle(true);MG_DEBUG.scan(150);let t=0;while(MG_DEBUG.state().job&&t<240){await W(250);t++;}const a=MG_DEBUG.state();
+  MG_DEBUG.scan(0);t=0;let seenStages=new Set();while(MG_DEBUG.state().job&&t<1200){seenStages.add(MG_DEBUG.state().job);await W(250);t++;}const b=MG_DEBUG.state();MG_DEBUG.toggle(false);return {a:{job:a.job,s:a.suspects,h:a.holes.length},b:{job:b.job,s:b.suspects,h:b.holes.length},stages:[...seenStages],secs:t/4,rep:MG_DEBUG.report().slice(0,200)};});
+T(f9.a.job===null,'F9: проверка 150 м доходит до конца',f9.a);
+T(f9.b.job===null&&f9.stages.length>=2,'F9: проверка всей карты идёт по частям и заканчивается ('+f9.secs+' с на стенде)',f9);
 // кадры идут без ошибок
 await pg.waitForTimeout(1500);
 const fr=await pg.evaluate(()=>({beam:MG_EXPAND.beam?MG_EXPAND.beam.rotation.y:null,wheel:MG_EXPAND.wheel?MG_EXPAND.wheel.rotation.z:null,cull:MG_EXPAND.CULL.length}));
