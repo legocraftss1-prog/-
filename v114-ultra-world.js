@@ -166,7 +166,7 @@
   }
   function detailFrame(dt) {
     mScan -= dt;
-    if (mScan <= 0) { mScan = 5; special(); mq.length = 0; mqi = 0; scene.traverse(function (o) { if (o.isMesh && !o.userData.ultra) mq.push(o); }); }
+    if (mScan <= 0) { mScan = 15; special(); mq.length = 0; mqi = 0; scene.traverse(function (o) { if (o.isMesh && !o.userData.ultra) mq.push(o); }); }
     var n = 0, lim = MOBILE ? 300 : 900;
     while (mqi < mq.length && n < lim) {
       var o = mq[mqi++]; n++; if (!o.parent) continue;

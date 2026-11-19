@@ -50,7 +50,34 @@
   T.near = function (areaId, lx, lz, r) { var K = T.areas[areaId]; return area === areaId && Math.hypot(player.pos.x - K.ox - lx, player.pos.z - K.oz - lz) < r; };
   T.nearW = function (areaName, wx, wz, r) { return area === areaName && Math.hypot(player.pos.x - wx, player.pos.z - wz) < r; };
 
-  /* ---------------- цель на экране ---------------- */
+  /* ---------------- титры: надпись на чёрном экране ждёт кнопки «Дальше» ---------------- */
+  var cardBtn = null;
+  T.card = function (text, ms) {
+    return new Promise(function (res) {
+      Promise.resolve(fade(1, ms || 450, text)).then(function () {
+        if (!cardBtn) {
+          cardBtn = document.createElement('button'); cardBtn.id = 'mgCardBtn'; cardBtn.type = 'button'; cardBtn.textContent = 'Дальше ▶';
+          cardBtn.style.cssText = 'position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 56px);transform:translateX(-50%);z-index:60;display:none;padding:12px 28px;border-radius:16px;border:2px solid #fff;background:rgba(255,255,255,.14);color:#fff;font:800 18px Rubik,Arial,sans-serif;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.5)';
+          document.body.appendChild(cardBtn);
+        }
+        var done = false, armed = false;
+        function fin(e) {
+          if (done || !armed) return;
+          if (e && e.type === 'keydown' && !/^(Space|Enter|NumpadEnter|KeyE)$/.test(e.code)) return;
+          if (e && e.type === 'mousedown' && !document.pointerLockElement) return;      // с захваченной мышью кнопку не видно — годится любой клик
+          if (e && e.preventDefault) e.preventDefault(); if (e && e.stopPropagation) e.stopPropagation();
+          done = true; cardBtn.style.display = 'none'; cardBtn.onclick = null;
+          removeEventListener('keydown', fin, true); removeEventListener('mousedown', fin, true);
+          try { sfx('click'); } catch (er) { } res();
+        }
+        cardBtn.style.display = 'block'; cardBtn.onclick = fin;
+        addEventListener('keydown', fin, true); addEventListener('mousedown', fin, true);
+        setTimeout(function () { armed = true; }, 400);                                  // защита от случайного двойного нажатия
+      });
+    });
+  };
+
+  /* ---------------- цель на экране ---------------- */  /* ---------------- цель на экране ---------------- */
   T.setObj = function (text, areaId, lx, lz) { if (!T.lvl) return; T.lvl.obj = text ? { t: text, p: (areaId ? T.at(areaId, lx, lz) : null) } : null; };
   T.begin = function (n) { T.lvl = { n: n, obj: null }; }; T.endLvl = function () { T.lvl = null; };
 

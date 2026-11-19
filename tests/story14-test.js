@@ -14,6 +14,8 @@ let pass=0,fail=0;const ok=(c,n,x)=>{c?pass++:fail++;console.log(c?'  ✔':'  �
    window.sw=()=>{if(!canSwitch())return false;doSwitch();return true;};
    window.be=h=>{if(player!==h){if(!canSwitch())throw new Error('нельзя переключиться');doSwitch();}};
    window.ticks=n=>new Promise(r=>setTimeout(r,n*20));
+   setInterval(()=>{const b=document.getElementById('mgCardBtn');if(b&&b.style.display==='block')b.click();},150);
+   {const oc=MG_STORY.card;MG_STORY.card=function(){window.__cards=(window.__cards||0)+1;return oc.apply(this,arguments);};}
    window.freeAt=(x,z)=>{const q={x,z};collide(q,.35);return Math.hypot(q.x-x,q.z-z)<.02;};
    window.flood=(sx,sz,lim)=>{const st=.5,seen=new Set(),Q=[[Math.round(sx/st),Math.round(sz/st)]];const key=(i,j)=>i+','+j;if(!freeAt(Q[0][0]*st,Q[0][1]*st))return {n:0,has:()=>false};seen.add(key(Q[0][0],Q[0][1]));
      while(Q.length&&seen.size<(lim||60000)){const [i,j]=Q.pop();for(const [a,b] of [[1,0],[-1,0],[0,1],[0,-1]]){const ni=i+a,nj=j+b,k=key(ni,nj);if(seen.has(k))continue;if(!freeAt(ni*st,nj*st)||!freeAt((i+a/2)*st,(j+b/2)*st))continue;seen.add(k);Q.push([ni,nj]);}}
@@ -192,11 +194,12 @@ let pass=0,fail=0;const ok=(c,n,x)=>{c?pass++:fail++;console.log(c?'  ✔':'  �
  console.log('[H] Финал');
  let Hf=await pg.evaluate(async()=>{const r={},n=spoke.length;M.dev.skipTug();for(let i=0;i<400&&!S.q.baton14;i++){await ticks(5);}await idle();await ticks(5);
    r.lines=spoke.slice(n).map(l=>l[0]+': '+l[1]);r.done=!!S.q.baton14;r.stage=M.Q().stage;r.dones=window.__done;r.area=area;r.pos=[player.pos.x,player.pos.z];r.lvl=!!MG_STORY.lvl;r.tug=M.W.tug;r.sc=[player.g.scale.x,comp.g.scale.x,M.N.sci.g.scale.x];r.ovr=player.ovr||null;r.fixed=cam.fixed;r.ai=comp.ai;r.sci=M.N.sci.hidden;r.antonVis=M.N.antonC.visible;r.carry=M.W.carry;
-   M.tick(.04,1);r.endHole=[M.W.endHole.g.visible,M.W.endHole.tr];r.cityHole=M.W.cityHole.g.visible;r.avail=M.avail();r.hint=objective().t;r.toast=toasts.slice(-1)[0];r.acts=[find('🕳️ Подойти к дыре','city')[0].ok(),find('🚪 Войти на хлебозавод','city')[0].ok(),find('🥖 Вернуться к батону','city')[0].ok()];return r;});
+   M.tick(.04,1);r.endHole=[M.W.endHole.g.visible,M.W.endHole.tr];r.cityHole=M.W.cityHole.g.visible;r.avail=M.avail();r.hint=objective().t;for(let i=0;i<150&&!toasts.slice(-4).some(t=>/следующем деле/.test(t));i++)await ticks(2);r.cards=window.__cards;r.toast=toasts.slice(-4).join(' | ');r.acts=[find('🕳️ Подойти к дыре','city')[0].ok(),find('🚪 Войти на хлебозавод','city')[0].ok(),find('🥖 Вернуться к батону','city')[0].ok()];return r;});
  ok(Hf.done&&Hf.stage===5&&Hf.dones.includes('baton14'),'дело закрыто и сохранено',Hf);
  ok(Hf.lines.some(l=>/Дыра. Она пришла за батоном сама/.test(l))&&Hf.lines.some(l=>l==='anton: Лучше пусть он никому не достанется.')&&Hf.lines.some(l=>/Сияющий батон падает в дыру/.test(l)),'Антон забирает батон и выбрасывает его в дыру: «лучше пусть он никому не достанется»',Hf.lines);
  ok(Hf.area==='city'&&!Hf.lvl&&Hf.tug===null&&Hf.sc.every(s=>s===1)&&Hf.ovr===null&&Hf.fixed===null&&Hf.ai==='follow'&&Hf.sci&&!Hf.antonVis&&!Hf.carry,'после финала игра в рабочем состоянии: герои целы, камера свободна, напарник снова идёт следом',Hf);
  ok(Hf.endHole[0]&&Hf.endHole[1]===8&&!Hf.cityHole&&!Hf.avail&&Hf.hint==='main'&&Hf.acts.every(a=>!a)&&/Продолжение|следующем деле/.test(Hf.toast),'у завода остаётся большая дыра; дело больше не предлагается',Hf);
+ ok(Hf.cards===2,'финальные надписи ждут кнопку «Дальше»',Hf.cards);
  ok(errs.length===0,'за всё прохождение ошибок JavaScript нет',errs.slice(0,5));
 
  console.log('[I] Продолжение после перезапуска игры и защита от зависаний');

@@ -85,7 +85,7 @@ const URL='file:///home/claude/h13/index.html';
  console.log('[F] Шейдерные вставки в материалы');
  let F=await pg.evaluate(()=>{const sh={vertexShader:'#include <common>\nvoid main(){\n#include <beginnormal_vertex>\n#include <begin_vertex>\n}',fragmentShader:'#include <common>\nvoid main(){\n#include <color_fragment>\n}'};groundMat.onBeforeCompile(sh);const a=sh.fragmentShader;groundMat.onBeforeCompile(sh);
    // имитация модуля графики 1.11: он заменяет перехват, не вызывая предыдущий
-   const prev=walkMat.onBeforeCompile;walkMat.onBeforeCompile=function(s){s.fragmentShader+='//GFX';};for(let i=0;i<400;i++)tick(.016);const sh2={vertexShader:sh.vertexShader.split('varying')[0]+'#include <common>\n#include <begin_vertex>',fragmentShader:'#include <common>\n#include <color_fragment>'};walkMat.onBeforeCompile(sh2);
+   const prev=walkMat.onBeforeCompile;walkMat.onBeforeCompile=function(s){s.fragmentShader+='//GFX';};for(let i=0;i<1100;i++)tick(.016);const sh2={vertexShader:sh.vertexShader.split('varying')[0]+'#include <common>\n#include <begin_vertex>',fragmentShader:'#include <common>\n#include <color_fragment>'};walkMat.onBeforeCompile(sh2);
    return {once:a===sh.fragmentShader,has:/ultDetail\(vUW,vUN,diffuseColor\.rgb\)/.test(a)&&/vUN=normalize/.test(sh.vertexShader),key:groundMat.customProgramCacheKey().indexOf('|ult1')>=0,rewrap:/GFX/.test(sh2.fragmentShader)&&/ultDetail/.test(sh2.fragmentShader)};});
  ok(F.has&&F.once&&F.key,'вставка добавляется один раз и меняет ключ программы',F);
  ok(F.rewrap,'после вмешательства модуля графики 1.11 вставка восстанавливается и не теряет его код',F);

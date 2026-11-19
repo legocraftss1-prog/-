@@ -153,7 +153,7 @@
     s.bias = -0.0007; s.normalBias = 0.05;
     S.half = half; S.texel = 2 * half / want;
     if (!gfxFlags()) {
-      scanT -= dt; if (scanT <= 0) { scanT = 4; queue.length = 0; qi = 0; scene.traverse(function (o) { if (o.isMesh) queue.push(o); }); }
+      scanT -= dt; if (scanT <= 0) { scanT = 12; queue.length = 0; qi = 0; scene.traverse(function (o) { if (o.isMesh) queue.push(o); }); }
       var n = 0, lim = MOBILE ? 500 : 1400; while (qi < queue.length && n < lim) { var o = queue[qi++]; if (o.parent) flag(o); n++; }
     }
   }

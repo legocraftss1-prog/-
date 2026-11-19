@@ -708,8 +708,8 @@
         pulls.forEach(function (p) { p.a.pos.x = p.x + (hx - p.x) * e; p.a.pos.z = p.z + (hz - p.z) * e; p.a.g.scale.setScalar(s); p.a.yaw += .25; });
         N.antonC.position.set(an0.x + (hx - an0.x) * e, hy + Math.sin(u * PI) * 1.5, an0.z + (hz - an0.z) * e); N.antonC.scale.setScalar(1.25 * s); N.antonC.rotation.y += .3;
       });
-      await fade(1, 1200, '🕳️ Дыра забрала хлебозавод, парковку, учёного, Антона-Батона, Марью и Гуся.'); await wait(2600);
-      await fade(1, 600, '…Продолжение следует.'); await wait(2200);
+      await T.card('🕳️ Дыра забрала хлебозавод, парковку, учёного, Антона-Батона, Марью и Гуся.', 1200);
+      await T.card('…Продолжение следует.');
       player.ovr = null; player.g.scale.setScalar(1); comp.g.scale.setScalar(1); N.sci.g.scale.setScalar(1); N.sci.hidden = true; N.sci.g.visible = false; N.antonC.visible = false; N.antonC.scale.setScalar(1.25); cam.fixed = null;
       comp.ai = 'follow'; W.endHole.spin = 1; W.endHole.set(8);
     });

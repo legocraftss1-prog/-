@@ -68,6 +68,7 @@ function makeDuck(){return mkObj();}function makePigeon(){return mkObj();}functi
 var CARS=0;function car(p,x,z,ry,c){CARS++;const g=mkObj();g.position.set(x,0,z);addCol(x-1,x+1,z-2,z+2);return g;}
 function freeAt(x,z,r){const q={x,z};collide(q,r);return Math.hypot(q.x-x,q.z-z)<.02;}
 var narmina={hidden:false,g:{visible:true}};
+var WORLD={t:12,season:'winter',weather:'snow',wLeft:3};function applySeason(x){WORLD.season=x;}
 var hemiOverride=null,COOP={on:false},shadowMat={},BREADF={x:505,z:-60,anton:{visible:true}},switched=0;
 function makeAnton(){const g=mkObj();g.traverse=function(f){};return g;}
 function textSprite(){return mkObj();}function emojiTex(e){return {e};}

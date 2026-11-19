@@ -295,7 +295,7 @@ body.busy #controls *{pointer-events:none}
   <h1>Марья,<br>Гусь<br>и абсурдный город</h1>
   <div class="tag">Обычный район. Обычные дворы. Над домом летит собака. Никто не реагирует.</div>
   <div class="bt"><button id="bPlay" disabled><span id="loading">Город загружается…</span></button><button id="bNew" class="alt hidden">Новая игра</button></div>
-  <div class="hint">VERSION 1.16.0 «Новые дела» Левая часть экрана — ходить, правая — камера. ПК: WASD, Shift, E, Q, F, пробел — прыжок.</div>
+  <div class="hint">VERSION 1.18.0 «Новые дела» Левая часть экрана — ходить, правая — камера. ПК: WASD, Shift, E, Q, F, пробел — прыжок.</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -2496,7 +2496,7 @@ function applySave12(){ensureEco();rebuildChar(gus);rebuildChar(marya);
 /* =====================================================================
    ОБНОВЛЕНИЕ 1.3 — БОЛЬШОЙ ГОРОД: РЕЛЬЕФ, РАЙОНЫ, ДВОРЫ, ЗИМА
    ===================================================================== */
-const WORLD_R=732;
+let WORLD_R=732;
 const sstep=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t);};
 function rectDist(x,z,x0,x1,z0,z1){const dx=Math.max(x0-x,0,x-x1),dz=Math.max(z0-z,0,z-z1);return Math.hypot(dx,dz);}
 const PADS=[];
@@ -4059,7 +4059,7 @@ renderPhone=function(){if(!['invites','settings','dev'].includes(phoneApp)){_ren
       rowBtn(b,'❌ Отказаться','','Нет',()=>{SKEV.state='none';notify('Отказ отправлен. Позовут в другой раз.','🛹');renderPhone();});}
     else if(SKEV.state==='accepted')line('⭐ Ты участвуешь: скейт-парк «Доска», сегодня с 18:00. Метка на карте.');
     else line('Новых приглашений нет. Они приходят, когда изучено 4+ трюка — не чаще раза в пару игровых дней.');}
-  if(phoneApp==='settings'){h.textContent='⚙️ Настройки · VERSION 1.16.0 «Новые дела»';
+  if(phoneApp==='settings'){h.textContent='⚙️ Настройки · VERSION 1.18.0 «Новые дела»';
     rowBtn(b,'🚪 Выйти в главное меню',COOP.on?(COOP.host?'прогресс сохранится у тебя':'прогресс сохранится у создателя комнаты'):'игра сохранится','Выйти',()=>exitToMenu());line('💾 Автосохранение: каждые 20 секунд и при сворачивании. Сохраняется всё: деньги, транспорт, позиции, трюки, бизнес, сюжет, вещи, мир.',15);
     if(S.savedAt)line('Последнее сохранение: '+new Date(S.savedAt).toLocaleTimeString('ru-RU'),15);
     rowBtn(b,'💾 Сохранить сейчас (слот '+SAVE_SLOT+')','','Сохранить',()=>{fullSave(true);renderPhone();});slotsPanel(b);
@@ -7043,6 +7043,8 @@ requestAnimationFrame(loop);init();
 <script src="v113-level3.js"></script>
 <script src="v115-level14.js"></script>
 <script src="v116-level15.js"></script>
+<script src="v117-perf.js"></script>
+<script src="v118-expand.js"></script>
 <script src="v113-dev.js"></script>
 </body>
 </html>

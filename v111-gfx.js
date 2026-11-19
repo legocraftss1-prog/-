@@ -328,7 +328,7 @@
   function frame(dt) {
     var now = performance.now(), ft = now - lastT; lastT = now;
     fpsTick(dt);
-    if (GFX.mode !== 'hd' && GFX.opt.texQ !== 1) { scanT -= dt; if (scanT <= 0) { scanT = 6; applyTexQ(); } }
+    if (GFX.mode !== 'hd' && GFX.opt.texQ !== 1) { scanT -= dt; if (scanT <= 0) { scanT = 15; applyTexQ(); } }
     if (GFX.mode !== 'hd' || !GFX.applied) return;
     if (ft < 250) fpsEma += (ft - fpsEma) * .05;
     if (GFX.auto && typeof started !== 'undefined' && started) {
@@ -351,7 +351,7 @@
     if (typeof sun !== 'undefined') waterUniforms.uSun.value.copy(sun.position).sub(sun.target.position).normalize();
     if (typeof scene !== 'undefined' && scene.background) waterUniforms.uSky.value.copy(scene.background);
     if (typeof fog !== 'undefined' && GFX.fogMul !== 1) { fog.far *= GFX.fogMul; if (GFX.fogMul > 1) fog.near *= (1 + (GFX.fogMul - 1) * .6); }
-    scanT -= dt; if (scanT <= 0) { scanT = 4; rescan(); if (GFX.opt.texQ !== 1) applyTexQ(); }
+    scanT -= dt; if (scanT <= 0) { scanT = 12; rescan(); if (GFX.opt.texQ !== 1) applyTexQ(); }
     processQueue(MOBILE ? 500 : 1200);
   }
 

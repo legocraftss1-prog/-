@@ -86,6 +86,7 @@
     DC(b, '♻️ Сбросить все новые дела 1.13', function () { newQ().forEach(function (q) { S.q[q[0]] = false; }); S.p13 = {}; setTimeout(function () { location.reload(); }, 600); }, 'перезапуск игры');
     if (window.MG_L14) storyL14(b);
     if (window.MG_L15) storyL15(b);
+    if (window.MG_EXPAND) storyExp(b);
     var L = T.lvl;
     if (L && L.n === 1 && window.MG_L1) storyL1(b);
     if (window.MG_L2 && S.q.points && !S.q.chek) storyL2(b);
@@ -100,6 +101,18 @@
     if (id === 'chek' && window.MG_L2) { var K2 = MG_L2.K2; if (K2.receipt && K2.kb) { K2.kb.g.remove(K2.receipt); K2.receipt = null; } }
     if (window.MG_STORY) MG_STORY.lvl = null;
     comp.hidden = false;
+  }
+  function storyExp(b) {
+    var E = MG_EXPAND, st = E.force === null ? 'по сюжету' : (E.force ? 'включено вручную' : 'выключено вручную');
+    phSec(b, '🏝️ Расширение «почти дом» — ' + (E.active ? 'активно' : 'нет') + ' (' + st + ')');
+    phLine(b, 'В игре появляется само после финала сюжетки №15. Здесь можно включить заранее. Первое включение строит мир ~1–3 с.' + (E.built ? ' Построено за ' + E.stats.ms + ' мс, домов ' + (E.stats.houses || 0) + '.' : ''), 12);
+    D(b, '✅ Включить сейчас', function () { E.set(true); say_('🏝️ Расширение включено', 1400); closeModal(); });
+    D(b, '⛔ Выключить', function () { E.set(false); say_('Расширение выключено, забор на месте', 1400); closeModal(); });
+    D(b, '🔁 Как по сюжету', function () { E.force = null; E.sync(); say_(E.active ? 'По сюжету: включено' : 'По сюжету: выключено', 1400); closeModal(); });
+    if (!E.active) return;
+    (E.lm || []).filter(function (l) { return !/🛣️/.test(l.e) || /Набережная|Дачная/.test(l.n); }).forEach(function (l) {
+      D(b, l.e + ' → ' + l.n, function () { var p = E.spotNear(l.x, l.z); if (!p) { say_('Нет места рядом', 1200); return; } closeModal(); if (player.drive) try { exitVehicle(); } catch (e) { } if (player.drive) { say_("Сначала выйди из машины", 1400); return; } placeA(player, p.x, p.z, 0); showComp(p.x + 1.4, p.z + .6); });
+    });
   }
   function storyL15(b) {
     var M = MG_L15, q = M.Q(), f = q.f, d = M.dev, R = M.ride();
@@ -265,6 +278,7 @@
   function tabDbg(b) {
     var info = renderer && renderer.info ? renderer.info : null, R = info && info.render || {}, M = info && info.memory || {};
     phLine(b, '⚡ ' + DEVX.fps + ' FPS · вызовов отрисовки ' + (R.calls || 0) + ' · треугольников ' + (R.triangles || 0).toLocaleString('ru-RU'), 14);
+    if (window.MG_PERF) phLine(b, '🚀 Оптимизация: ' + (MG_PERF.on ? 'вкл' : 'выкл') + ' · далёких объектов скрыто ' + MG_PERF.hidden + ' из ' + MG_PERF.total + ' · дальность ' + Math.round(MG_PERF.limit()) + ' м', 13);
     phLine(b, '🧠 Геометрий ' + (M.geometries || 0) + ' · текстур ' + (M.textures || 0) + ' · область «' + areaName(area) + '»', 14);
     var cnt = function (v) { try { return v.length; } catch (e) { return '—'; } };
     phLine(b, '👥 Персонажей ' + cnt(actors) + ' · прохожих ' + cnt(peds) + ' · машин ' + cnt(VEHS) + ' · коллайдеров ' + cnt(cols) + ' · точек действия ' + cnt(inters), 13);

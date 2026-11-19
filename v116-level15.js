@@ -14,7 +14,7 @@
   'use strict';
   var T = window.MG_STORY, D = window.MG_DIST, PI = Math.PI;
   if (!T || !D) { console.error('[LEVEL15] нет каркаса'); return; }
-  var BR = 'p15_bread', SV = 'p15_svet', CH = 'p15_chaos';
+  var BR = 'p15_bread', SV = 'p15_svet', CH = 'p15_chaos', SP = 'p15_space';
   var K = {}, built = false, L = null, N = {}, R = null;
   var W = { mode: 'follow', busy: false, ev: 'low', evT: 10, evI: 0, grace: 0, boss: null, guard: null, envT: 0, hidden: [], staffT: 0 };
   function Q() { S.p13 = S.p13 || {}; var q = S.p13.w15 = S.p13.w15 || { part: 0 }; if (!q.f) q.f = {}; return q; }
@@ -22,7 +22,7 @@
   function coop() { return typeof COOP !== 'undefined' && COOP.on; }
   function isHero(h) { return coop() || player === h; }
   function need(h) { toast(h === gus ? '🪿 Тут справится только Гусь. Переключись на него (🔄).' : '👩 Тут справится только Марья. Переключись на неё (🔄).', 2800); sfx('bonk'); }
-  function myArea() { return area === BR || area === SV || area === CH; }
+  function myArea() { return area === BR || area === SV || area === CH || area === SP; }
   function clampN(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function anim(ms, fn) { return new Promise(function (res) { var t0 = performance.now(); (function f() { var u = Math.min(1, (performance.now() - t0) / ms); try { fn(u); } catch (e) { console.error('[LEVEL15 anim]', e); u = 1; } if (u < 1) requestAnimationFrame(f); else res(); })(); }); }
   function mixHex(a, b, k) { var ar = a >> 16 & 255, ag = a >> 8 & 255, ab = a & 255, br = b >> 16 & 255, bg = b >> 8 & 255, bb = b & 255; return (Math.round(ar + (br - ar) * k) << 16) | (Math.round(ag + (bg - ag) * k) << 8) | Math.round(ab + (bb - ab) * k); }
@@ -74,7 +74,7 @@
   function ride(cfg) {
     return new Promise(function (res) {
       R = Object.assign({ x: 0, t: 0, slow: 0, fast: 0, hits: 0, fails: 0, inv: false, spMul: 1, steerMul: 1, res: res, paused: false }, cfg);
-      R.z = R.z0; R.cp = R.z0; R.cz = R.z0 + R.gap; R.mid = (R.z0 + R.z1) / 2; R.cpDone = false;
+      R.z = R.z0; R.cp = R.z0; R.cz = R.z0 + R.gap; R.mid = (R.z0 + R.z1) / 2; R.cpDone = false; if (R.fly) R.y = R.y0;
       R.hz.forEach(function (h) { h.hit = false; if (h.s) h.s.visible = true; });
       try { dismount(player); } catch (e) { }
       if (R.mesh) R.mesh.visible = true; if (R.chaser) R.chaser.visible = true;
@@ -90,21 +90,23 @@
     R.slow -= dt; R.fast -= dt;
     var sp = R.speed * (run ? 1.28 : 1) * (R.slow > 0 ? .45 : 1) * (R.fast > 0 ? 1.45 : 1) * R.spMul;
     R.x = clampN(R.x + st * 7.5 * R.steerMul * dt, -R.w, R.w); R.z -= sp * dt;
+    if (R.fly) { var sv = -(joy.y || 0) + ((keys.KeyW || keys.ArrowUp) ? 1 : 0) - ((keys.KeyS || keys.ArrowDown) ? 1 : 0); sv = clampN(sv, -1, 1) * (R.inv ? -1 : 1); R.sv = sv; R.y = clampN(R.y + sv * 6.5 * R.steerMul * dt, R.ymin, R.ymax); }
     for (var i = 0; i < R.hz.length; i++) {
       var h = R.hz[i]; if (h.hit) continue; if (h.mx) { h.x = h.bx + Math.sin(R.t * h.mf + h.ph) * h.mx; if (h.s) h.s.position.x = k.ox + h.x; }
-      if (Math.abs(h.z - R.z) < h.r + .55 && Math.abs(h.x - R.x) < h.r + .55) {
+      if (h.spin && h.s) { h.s.rotation.x += dt * h.spin; h.s.rotation.y += dt * h.spin * .7; }
+      if (Math.abs(h.z - R.z) < h.r + .55 && Math.abs(h.x - R.x) < h.r + .55 && (!R.fly || h.y === undefined || Math.abs(h.y - R.y) < h.r + .8)) {
         h.hit = true; if (h.boost) { R.fast = 1.6; sfx('coin'); if (h.s) h.s.visible = false; toast('⚡ Ускорение!', 900); }
         else { R.slow = .9; R.hits++; sfx('bonk'); toast(R.hitTxt || '💥 Бдыщ!', 800); }
       }
     }
     R.cz -= R.cs * dt * (R.fails >= 2 ? .88 : 1);
     if (!R.cpDone && R.z < R.mid) { R.cpDone = true; R.cp = R.mid; sfx('ding'); toast('🏁 Половина пути! Здесь чекпоинт.', 1600); }
-    if (R.chaser) R.chaser.position.set(k.ox, 0, k.oz + R.cz);
+    if (R.chaser) R.chaser.position.set(k.ox, R.fly ? R.y - 1.4 : 0, k.oz + R.cz);
     var gap = R.cz - R.z;
     if (gap < 1.1) { rideFail(); return; }
-    var bob = Math.sin(R.t * 14) * .05;
+    var bob = Math.sin(R.t * 14) * .05, my = R.fly ? -.6 : -.15;
     player.ovr = { x: k.ox + R.x, y: (R.y || .15) + bob, z: k.oz + R.z }; player.yaw = PI - st * .3; player.moving = false;
-    if (R.mesh) { R.mesh.position.set(k.ox + R.x, (R.y || .15) - .15 + bob, k.oz + R.z); R.mesh.rotation.y = PI - st * .3; }
+    if (R.mesh) { R.mesh.position.set(k.ox + R.x, (R.y || .15) + my + bob, k.oz + R.z); R.mesh.rotation.y = PI - st * .3; if (R.fly) { R.mesh.rotation.z = -st * .35; R.mesh.rotation.x = (R.sv || 0) * .2; } }
     if (!coop()) { comp.hidden = false; comp.g.visible = true; comp.pos.set(k.ox + R.x + (R.cx || .85), 0, k.oz + R.z + (R.cz2 || .7)); comp.g.position.set(comp.pos.x, (R.y || .15) + bob, comp.pos.z); comp.yaw = player.yaw; comp.g.rotation.y = comp.yaw; comp.moving = false; poseActor(comp, dt); }
     T.lvl && (T.lvl.obj = { t: (R.title || '🏁 Заезд') + ' · до финиша ' + Math.max(0, Math.round(R.z - R.z1)) + ' м · ' + (R.chaseName || 'догоняют') + ': ' + Math.max(0, Math.round(gap)) + ' м', p: null });
     if (R.z <= R.z1) rideWin();
@@ -113,12 +115,14 @@
     var r = R; r.paused = true; r.fails++;
     cutscene(async function () {
       sfx('bonk'); await fade(1, 350, r.failTxt || '💥 Догнали!'); await wait(450);
-      r.z = r.cp; r.cz = r.cp + r.gap; r.x = 0; r.slow = 0; r.fast = 0; r.hz.forEach(function (h) { if (h.z < r.cp) { h.hit = false; if (h.s) h.s.visible = true; } });
+      r.z = r.cp; r.cz = r.cp + r.gap; r.x = 0; if (r.fly) r.y = r.y0; r.slow = 0; r.fast = 0; r.hz.forEach(function (h) { if (h.z < r.cp) { h.hit = false; if (h.s) h.s.visible = true; } });
       await fade(0, 350); toast(r.fails >= 2 ? '🙂 Ещё раз с чекпоинта. Преследователь чуть устал.' : '↩️ Ещё раз с чекпоинта.', 2000);
     }).then(function () { r.paused = false; });
   }
   function rideWin() {
-    var r = R; R = null; player.ovr = null; cam.force = null; if (r.mesh) r.mesh.visible = false; if (r.chaser) r.chaser.visible = false;
+    var r = R; R = null; cam.force = null; if (r.chaser) r.chaser.visible = false;
+    if (r.fly) { r.res({ hits: r.hits, fails: r.fails, x: r.x, y: r.y }); return; }   // полёт: тарелка и герои остаются в воздухе до финальной сцены
+    player.ovr = null; if (r.mesh) r.mesh.visible = false;
     placeA(player, r.K.ox + r.x, r.K.oz + r.z1 - .5, PI); placeA(comp, r.K.ox + r.x + 1.2, r.K.oz + r.z1 + .2, PI);
     r.res({ hits: r.hits, fails: r.fails });
   }
@@ -128,8 +132,11 @@
       var n = 1 + (Rn() < cfg.dens ? 1 : 0);
       for (var i = 0; i < n; i++) {
         var x = (Rn() * 2 - 1) * (cfg.w - .8), boost = Rn() < (cfg.boostP || .12), e = boost ? '⚡' : cfg.icons[Math.floor(Rn() * cfg.icons.length)], r = boost ? .7 : (cfg.r || .9);
-        var s = emojiSprite(e, boost ? 1.1 : (cfg.size || 1.7)); s.position.set(k.ox + (cfg.ox || 0) + x, boost ? 1 : (cfg.size || 1.7) * .5, k.oz + z); k.g.add(s);
-        var h = { x: x, bx: x, z: z, r: r, s: s, boost: boost, hit: false };
+        var y = cfg.fly ? cfg.ymin + Rn() * (cfg.ymax - cfg.ymin) : undefined, s;
+        if (cfg.fly && !boost && Rn() < .7) { r = .9 + Rn() * 1.3; s = new THREE.Mesh(G.sph, ROCK[Math.floor(Rn() * ROCK.length)]); s.scale.set(r * 2.1, r * 1.7, r * 1.9); }
+        else s = emojiSprite(e, boost ? 1.1 : (cfg.size || 1.7));
+        s.position.set(k.ox + (cfg.ox || 0) + x, cfg.fly ? y : (boost ? 1 : (cfg.size || 1.7) * .5), k.oz + z); k.g.add(s);
+        var h = { x: x, bx: x, y: y, z: z, r: r, s: s, boost: boost, hit: false, spin: cfg.fly && !boost ? .4 + Rn() : 0 };
         if (!boost && cfg.move && Rn() < cfg.move) { h.mx = 2 + Rn() * 2; h.mf = 1 + Rn() * 1.5; h.ph = Rn() * 6; }
         list.push(h);
       }
@@ -137,6 +144,7 @@
     }
     return list;
   }
+  var ROCK = null;
   function chaserRow(k, e, w, n) { var g = new THREE.Group(); for (var i = 0; i < n; i++) { var s = emojiSprite(e, 2.6 + (i % 2) * .8); s.position.set(-w + (2 * w) * i / (n - 1), 1.4 + (i % 3) * .5, 0); g.add(s); } g.visible = false; k.g.add(g); return g; }
 
   /* ====================== ПОСТРОЙКА МИРОВ ====================== */
@@ -167,7 +175,9 @@
     N.crowd = []; for (i = 0; i < 12; i++) { var cx = -40 + R_() * 80, cz = -14 + R_() * 50; if (Math.hypot(cx + 16, cz + 4) < 6 || Math.abs(cx) < 4 && cz < -16) continue; var a = place(k, antonVar({ tint: CRUST[i % 4], k: .35, s: 1 + R_() * .5 }), cx, cz, R_() * 6); N.crowd.push({ g: a, x: cx, z: cz, ph: R_() * 6 }); }
     // холм и дорожка лавины: от z=-40 до z=-260, ширина ±7
     for (i = 0; i < 12; i++) { var zz = -46 - i * 18; k.b(3, 3 + (i % 3), 16, CRUST[i % 4], -9.5, 0, zz); k.b(3, 3 + ((i + 1) % 3), 16, CRUST[(i + 2) % 4], 9.5, 0, zz); }
-    k.plane(16, 230, 0xd9b070, 0, -152, .02); k.sign('ХЛЕБНАЯ ГОРА · НЕ ШУМЕТЬ', 6, .8, 0, 4, -40, 0, '#8a4a2a', '#ffffff', { fs: .45 });
+    k.plane(16, 230, 0xd9b070, 0, -152, .02); k.sign('ХЛЕБНАЯ ГОРА · НЕ ШУМЕТЬ', 6, .8, 0, 4.8, -37.6, 0, '#8a4a2a', '#ffffff', { fs: .45 });
+    k.b(1.2, 6, 272, 0xb8763a, -11.6, 0, -174); k.b(1.2, 6, 272, 0xb8763a, 11.6, 0, -174);                       // сплошные склоны: на трассу пешком не попасть
+    N.gate = k.b(22.4, 3.4, .8, 0x8a4a2a, 0, 0, -38); for (i = -10; i <= 10; i += 2.5) k.m(G.cyl, 0xd9a35a, [.35, 4.2, .35], [i, 2.1, -37.5]);   // ворота из багетов
     N.brHole = T.hole(k, 0, -276, 3.2, .05);
     N.track = track(k, { seed: 15, z0: -42, z1: -262, w: 7, step: 9, dens: .35, icons: ['🍞', '🥐', '🥨', '🧈', '🥯'], move: .25 });
     N.skate = new THREE.Group(); M_(N.skate, G.box, 0xd84a2a, [.75, .08, 2.4], [0, 0, 0], null, false); for (var s = -1; s <= 1; s += 2) for (var t = -1; t <= 1; t += 2) M_(N.skate, G.cyl, 0x222222, [.18, .14, .18], [s * .3, -.08, t * .85], [0, 0, PI / 2], false); N.skate.visible = false; k.g.add(N.skate);
@@ -203,21 +213,29 @@
     N.overBar = k.emoji('🟥', 1, 102.6, 2.6, -224); N.svHole = T.hole(k, 100, -234, .2, .05); N.svHole.g.visible = false;
   }
   var K_ = { glow: function (c) { return new THREE.MeshBasicMaterial({ color: c }); } };
+  /* тарелка в натуральную величину: 6 м в поперечнике, прозрачный купол, под которым помещаются Марья и Гусь */
+  function bigSaucer() {
+    var g = makeSaucer(.7);
+    M_(g, G.sph, new THREE.MeshLambertMaterial({ color: 0xbfeaff, transparent: true, opacity: .32, depthWrite: false }), [6.6, 5.2, 6.6], [0, 1.1, 0], null, false);
+    M_(g, G.cyl, 0x4a4e57, [5.8, .25, 5.8], [0, .55, 0], null, false);
+    for (var i = 0; i < 8; i++) { var a = i / 8 * PI * 2; M_(g, G.sph, new THREE.MeshBasicMaterial({ color: i % 2 ? 0x7cff6a : 0x3ae0ff }), [.55, .35, .55], [Math.cos(a) * 5.4, -.5, Math.sin(a) * 5.4], null, false); }
+    return g;
+  }
   function buildChaos(k) {
     var R_ = D.rngf(1503), i;
     k.plane(320, 360, 0x2e2a40, 60, -100, 0); k.perimeter(300, 8, 0x1a1828);
     var neon = [0xff3aa0, 0x3ae0ff, 0xb06cff, 0xffd23f, 0x2fae5b];
     [[-30, -30], [-34, 6], [-30, 34], [30, -34], [38, 34], [-6, 40], [14, -42]].forEach(function (p, j) { var h = 8 + R_() * 14; k.b(12, h, 10, 0x2a2838, p[0], 0, p[1]); k.m(G.box, K_.glow(neon[j % 5]), [12.2, .5, 10.2], [p[0], h - 1, p[1]]); });
     // дом соседа (на крыше — деталь)
-    k.b(10, 6, 8, 0x5a5048, 24, 0, -8); N.partRoof = k.emoji('⚙️', 1.2, 24, 6.8, -8);
-    N.neigh = npc(k, 'w15_neigh', 'Сосед', { top: 0x7a6a5a, pants: 0x3a3a3a, hairStyle: 'none', hair: 0x5a5a5a, skin: 0xe8c0a0, apron: 0x9a9a9a }, 18.4, -8, -PI / 2); k.emoji('🔨', .7, 18.2, 2.2, -7.4);
+    k.b(10, 6, 8, 0x5a5048, 24, 0, -8); N.partRoof = k.emoji('⚙️', 1.2, 24, 6.8, -8); N.roofMark = k.emoji('🪶', 2.2, 24, 10, -8); label(k, 'Крыша соседа', 24, 8.4, -8, '#cfe8ff');
+    N.neigh = npc(k, 'w15_neigh', 'Сосед', { top: 0x7a6a5a, pants: 0x3a3a3a, hairStyle: 'none', hair: 0x5a5a5a, skin: 0xe8c0a0, apron: 0x9a9a9a }, 18.4, -3.2, -PI / 2); k.emoji('🔨', .7, 18.2, 2.2, -2.6);
     // фонтан с карасём (в фонтане — деталь)
     k.disc(5, 0x2a6a9a, 0, 18, .05, 32); k.b(1, .6, 1, 0x8a8f96, 0, 0, 18, { cam: false }); N.carp = makeCarp(); place(k, N.carp, 1.6, 18.4, 0, .3); N.partFount = k.emoji('⚙️', 1, -1.6, .4, 17.4); k.colC(0, 18, 5, .6);
     // «Добрый кола» (деталь — только во время диско)
     k.b(1.6, 2.6, 1.2, 0xd8263a, -20, 0, 8); k.emoji('🥤', 1.1, -20, 3.1, 8); label(k, '«Добрый кола»', -20, 3.9, 8, '#ff9a9a'); N.partDk = k.emoji('⚙️', .9, -18.4, 1.4, 8.8);
     // пилот и машина-тарелка
     N.pilot = npc(k, 'w15_pilot', 'Пилот тарелки', { top: 0x3a6a9a, pants: 0x2a3a5a, helmet: true, skin: 0xdba784, hairStyle: 'none' }, 10, 26, PI);
-    N.ufoCar = makeSaucer(); N.ufoCar.scale.setScalar(.18); place(k, N.ufoCar, 14, 26, 0, 1);
+    N.ufoCar = bigSaucer(); place(k, N.ufoCar, 16, 27, 0, 1.6); k.colC(16, 27, 3.4, 3); label(k, 'Тарелка пилота', 16, 5.4, 27, '#9fe0ff');
     // верстак учёного
     k.b(4, 1, 1.6, 0x6a7078, 0, 0, -12); k.emoji('🔫', .8, 0, 1.4, -12); N.sciC = npc(k, 'w15_sciC', 'Учёный', sciLook(), 0, -13.6, 0); dressSci(N.sciC);
     // гигантский гусь (во время события «Гусь»)
@@ -231,11 +249,33 @@
     k.anims.push(function (t) { N.evSign.position.y = 9 + Math.sin(t * 2) * .4; N.carp.rotation.y = t * .8; });
   }
 
+  /* ---------- открытый космос: звёзды, планеты, астероиды, обломки прошлых миров ---------- */
+  function buildSpace(k) {
+    var R_ = D.rngf(1504), i;
+    var N_ = 900, pos = new Float32Array(N_ * 3);
+    for (i = 0; i < N_; i++) { var a = R_() * PI * 2, rr = 60 + R_() * 260; pos[i * 3] = k.ox + Math.cos(a) * rr; pos[i * 3 + 1] = (R_() - .3) * 300; pos[i * 3 + 2] = k.oz + 60 - R_() * 640; }
+    var sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    var stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: true, fog: false })); stars.frustumCulled = false; stars.userData.noPerf = true; k.g.add(stars);
+    var pl = [[-90, 40, -80, 34, 0xd9a35a, '🍞 хлебный мир'], [110, 20, -170, 26, 0xe8473b, '🚦 мир Светофора'], [-70, -30, -260, 22, 0x6a3aa8, '🌪️ мир Хаоса'], [80, 60, -340, 40, 0x3a8ae0, '???'], [-40, 90, -420, 18, 0x2fae5b, '']];
+    pl.forEach(function (p, j) { var m = new THREE.Mesh(G.sph, new THREE.MeshLambertMaterial({ color: p[4], emissive: p[4], emissiveIntensity: .35 })); m.scale.setScalar(p[3] * 2); m.position.set(k.ox + p[0], p[1], k.oz + p[2]); m.userData.noPerf = true; k.g.add(m); if (p[5]) label(k, p[5], p[0], p[1] + p[3] + 4, p[2], '#ffffff');
+      if (j === 3) { var ring = new THREE.Mesh(new THREE.TorusGeometry(p[3] * 1.7, 2.2, 6, 48), new THREE.MeshBasicMaterial({ color: 0xbfd8ff })); ring.position.set(m.position.x, m.position.y, m.position.z); ring.rotation.x = 1.2; ring.userData.noPerf = true; k.g.add(ring); } });
+    // обломки прошлых миров пролетают по бокам
+    [['🍞', -22, 16, -60], ['🥖', 24, 10, -110], ['🧾', -26, 6, -150], ['🚦', 26, 18, -200], ['🥩', -24, 12, -250], ['🛒', 25, 4, -290], ['🪩', -22, 20, -330], ['🦢', 24, 14, -370]].forEach(function (d) { var sp = k.emoji(d[0], 6, d[1], d[2], d[3]); sp.userData.noPerf = true; (N.drift = N.drift || []).push({ s: sp, y: d[2], ph: R_() * 6 }); });
+    k.sign('КОСМОС · ДО ДЫРЫ 440 М', 10, 1.2, 0, 16, 6, PI, '#14141c', '#9be82e', { fs: .6 });
+    ROCK = [0x6a6e76, 0x7a6a5a, 0x5a5e66, 0x8a7a6a].map(function (c) { return new THREE.MeshLambertMaterial({ color: c }); });
+    N.trackSp = track(k, { seed: 154, z0: -10, z1: -430, w: 9, step: 9, dens: .6, icons: ['☄️', '🛰️', '☄️'], move: .3, boostP: .14, fly: true, ymin: 3, ymax: 17, size: 2.2, r: 1.1 });
+    N.ship = bigSaucer(); N.ship.visible = false; k.g.add(N.ship);
+    N.wave2 = chaserRow(k, '🌪️', 9, 6);
+    N.spHole = T.hole(k, 0, -452, 7, 10); N.spHole.g.rotation.x = PI / 2;
+    k.anims.push(function (t) { (N.drift || []).forEach(function (d) { d.s.position.y = d.y + Math.sin(t * .6 + d.ph) * 2; d.s.material && (d.s.material.rotation = t * .3 + d.ph); }); stars.rotation.z = t * .002; });
+  }
+
   /* ---------- освещение областей (поверх общего updEnv) ---------- */
   function envTick(dt) {
     var e = null;
     if (area === BR) e = { bg: 0xffe2b0, fn: 70, ff: 330, h: 1, s: .85 };
     else if (area === SV) e = { bg: 0xe6ecf2, fn: 50, ff: 240, h: 1.05, s: .35 };
+    else if (area === SP) e = { bg: 0x03040c, fn: 160, ff: 700, h: .9, s: 1.1 };
     else if (area === CH) { var hue = W.ev === 'disco' ? (performance.now() / 1600) % 1 : .72; var c = new THREE.Color().setHSL(hue, .55, W.ev === 'disco' ? .32 : .22); e = { bgC: c, fn: 40, ff: 260, h: W.ev === 'disco' ? .7 + Math.sin(performance.now() / 120) * .2 : .85, s: .5 }; }
     if (!e) return;
     if (e.bgC) { scene.background.copy(e.bgC); fog.color.copy(e.bgC); } else { scene.background.setHex(e.bg); fog.color.setHex(e.bg); }
@@ -248,6 +288,7 @@
     K.br = T.makeArea(BR, 240); T.build(BR, buildBread);
     K.sv = T.makeArea(SV, 300); T.build(SV, buildSvet);
     K.ch = T.makeArea(CH, 340); T.build(CH, buildChaos);
+    K.sp = T.makeArea(SP, 400); T.build(SP, buildSpace);
     wireBread(); wireSvet(); wireChaos(); chipUI();
   }
   async function startPart(n, fresh) {
@@ -288,7 +329,7 @@
     else if (!f.bGuard) obj('🦆 Шаг 2: Гусь охраняет тесто от хлебо-уток.', BR, -16, -1.8);
     else if (!f.bBake) obj('🔥 Шаг 3: в печь! Не пережарь.', BR, -16, -8);
     else if (!f.bBaton) obj('👑 Отнести выпечку королю.', BR, 0, -18);
-    else obj('🏔️ Бежать к дыре — через Хлебную гору!', BR, 0, -40);
+    else obj('🏔️ К воротам Хлебной горы — и вниз, к дыре!', BR, 0, -36.4);
   }
   function wireBread() {
     var A = function (x, z, l, fn, r, ok) { return T.act(BR, x, z, l, fn, r, ok); }, f = F;
@@ -296,7 +337,8 @@
     A(-16, -2.6, '🫓 Замесить тесто', function () { if (!isHero(marya)) return need(marya); knead(); }, 2.2, function () { return f().bKing && !f().bKnead; });
     A(-16, -1.8, '🪿 Охранять тесто от уток', function () { if (!isHero(gus)) return need(gus); guardStart(); }, 2.4, function () { return f().bKnead && !f().bGuard && !W.guard; });
     A(-16, -8, '🔥 Отправить в печь', function () { bake(); }, 2.2, function () { return f().bGuard && !f().bBake; });
-    A(0, -40, '🛹 Вниз с Хлебной горы!', function () { avalanche(); }, 3, function () { return f().bBaton && !f().bRide; });
+    A(0, -36.4, '🛹 Вниз с Хлебной горы!', function () { avalanche(); }, 3.2, function () { return f().bBaton && !f().bRide; });
+    A(0, -36.4, '🚧 Ворота на Хлебную гору', function () { toast('🚧 Ворота заперты. Сначала нужен Сияющий батон от короля.', 2600); }, 3.2, function () { return !f().bBaton; });
     A(10, 7.4, '💬 Нармина (хлебная)', function () { cutscene(async function () { await say([['narmina', 'Привет. Меня тут зовут Нармина-плетёнка. Ты похожа на ту, что мне снилась.'], ['marya', 'А я похожа на ту, что ест тебе подобных.'], ['narmina', 'Здесь все так говорят. Не переживай. Мы невкусные, когда разговариваем.']]); }); }, 2.2);
     A(17, 13.4, '💬 Максим (сухарь)', function () { cutscene(async function () { await say([['sys', 'Местный Максим — сухарь. Буквально. Рядом три хлебо-утки.'], ['gus', 'Максим. Это же ты.'], ['ex', '…хрусь.'], ['sys', 'Хлебо-утка подходит, нюхает Максима — и отворачивается.'], ['marya', 'Даже утки не стали.'], ['gus', 'Это лучший мир, в котором я был.']]); }); }, 2.2);
     A(23.4, 15.6, '🦆 Хлебо-утки', function () { cutscene(async function () { await say([['duckc', 'Кря.'], ['sci', 'Это они ехали в той тарелке. Пилот возил их домой — сюда. Вот почему хлебо-утки были в вашем городе.'], ['gus', 'Значит, тарелка — это просто маршрутка между мирами.'], ['duckc', 'Кря-кря.']]); }); }, 2.4);
@@ -500,9 +542,9 @@
   function parts() { var f = F(); return (f.pRoof ? 1 : 0) + (f.pFount ? 1 : 0) + (f.pDk ? 1 : 0); }
   function chaosObj() {
     var f = F(), n = parts();
-    if (n < 3) obj('⚙️ Детали пушки: ' + n + '/3 · сейчас: ' + evName(W.ev) + '. ' + (!f.pRoof ? 'Крыша соседа — Гусь взлетит при низкой гравитации.' : !f.pFount ? 'Фонтан с карасём — Марья достанет, когда пойдёт дождь из котлет.' : '«Добрый кола» отдаст деталь только на дискотеке.'), CH, !f.pRoof ? 20.6 : !f.pFount ? -3.4 : -18.6, !f.pRoof ? -6 : !f.pFount ? 14.6 : 9.6);
+    if (n < 3) obj('⚙️ Детали пушки: ' + n + '/3 · сейчас: ' + evName(W.ev) + '. ' + (!f.pRoof ? 'Крыша соседа (над ней 🪶) — Гусь взлетит с любой стороны дома при низкой гравитации.' : !f.pFount ? 'Фонтан с карасём — Марья достанет, когда пойдёт дождь из котлет.' : '«Добрый кола» отдаст деталь только на дискотеке.'), CH, !f.pRoof ? 24 : !f.pFount ? -3.4 : -18.6, !f.pRoof ? -8 : !f.pFount ? 14.6 : 9.6);
     else if (!f.cFix) obj('🔫 Отнести детали учёному.', CH, 0, -10.4);
-    else if (!f.cRide) obj('🛸 Сесть в машину-тарелку у пилота.', CH, 13, 24.2);
+    else if (!f.cRide) obj('🛸 Сесть в тарелку пилота — полетим через космос к дыре.', CH, 16, 22.6);
     else obj('🕳️ …', CH, 120, -262);
   }
   function evPaint() { var e = EV[W.evI % 4]; W.ev = e[0]; try { N.evSign.material.map = emojiTex(e[1]); N.evSign.material.needsUpdate = true; } catch (er) { } }
@@ -519,16 +561,16 @@
   }
   function wireChaos() {
     var A = function (x, z, l, fn, r, ok) { return T.act(CH, x, z, l, fn, r, ok); }, f = F;
-    A(20.6, -6, '🪿 Взлететь на крышу соседа', function () { if (!isHero(gus)) return need(gus); if (W.ev !== 'low') { toast('🪿 Слишком тяжело. Нужна низкая гравитация (🪶).', 2400); return; } roofPart(); }, 2.4, function () { return !f().pRoof; });
-    A(18.4, -6.6, '💬 Сосед', function () { cutscene(async function () { await say([['neigh', '*сверлит* Здравствуйте! *сверлит* Тут перфоратор — это событие. Постоянное. Я счастлив.'], ['gus', 'В нашем мире ты сверлил в шесть утра.'], ['neigh', 'Здесь нет шести утра. Здесь всегда «ДРРРРР».'], ['marya', 'Ну хоть кто-то нашёл свой мир.']]); }); }, 2);
+    A(24, -8, '🪿 Взлететь на крышу соседа', function () { if (!isHero(gus)) return need(gus); if (W.ev !== 'low') { toast('🪿 Слишком тяжело. Нужна низкая гравитация (🪶).', 2400); return; } roofPart(); }, 7.6, function () { return !f().pRoof; });
+    A(18.4, -4.6, '💬 Сосед', function () { cutscene(async function () { await say([['neigh', '*сверлит* Здравствуйте! *сверлит* Тут перфоратор — это событие. Постоянное. Я счастлив.'], ['gus', 'В нашем мире ты сверлил в шесть утра.'], ['neigh', 'Здесь нет шести утра. Здесь всегда «ДРРРРР».'], ['marya', 'Ну хоть кто-то нашёл свой мир.']]); }); }, 2);
     A(-3.4, 14.6, '👩 Достать деталь из фонтана', function () { if (!isHero(marya)) return need(marya); if (W.ev !== 'rain') { toast('⛲ Деталь на дне, не достать. Когда пойдёт дождь из котлет, фонтан переполнится (🍖).', 2800); return; } fountPart(); }, 2.4, function () { return !f().pFount; });
     A(3.2, 20.6, '🐟 Чеченский карась', function () { cutscene(async function () { await say([['carp', 'Брат. Я плавал в вашей тарелке. Я видел уток. Я видел батон.'], ['carp', 'Теперь я плаваю здесь. Фонтан. Котлеты сверху. Это жизнь, брат.'], ['gus', 'Карась, ты философ.'], ['carp', 'Я карась.']]); }); }, 2.2);
     A(-18.6, 9.6, '🥤 «Добрый кола»', function () { dkPart(); }, 2.4, function () { return !f().pDk; });
-    A(10, 27.4, '💬 Пилот тарелки', function () { cutscene(async function () { await say([['pilot', 'О! Пассажиры! Я вас помню. Тарелка, утки, Антон.'], ['pilot', 'Я возил хлебо-уток домой, в хлебный мир. Потом свернул не туда — и оказался тут. Тут красиво. Тут всё время что-то происходит.'], ['marya', 'Ты нас довезёшь до дыры?'], ['pilot', 'Машина — ваша. Я тут останусь. Мне нравится, когда гравитация меняется.']]); f().pilot = true; save(); }); }, 2.4);
+    A(10, 27.4, '💬 Пилот тарелки', function () { cutscene(async function () { await say([['pilot', 'О! Пассажиры! Я вас помню. Тарелка, утки, Антон.'], ['pilot', 'Я возил хлебо-уток домой, в хлебный мир. Потом свернул не туда — и оказался тут. Тут красиво. Тут всё время что-то происходит.'], ['marya', 'Ты нас довезёшь до дыры?'], ['pilot', 'Тарелка — ваша. Полетите через космос: дыра теперь висит прямо среди звёзд. Я тут останусь — мне нравится, когда гравитация меняется.']]); f().pilot = true; save(); }); }, 2.4);
     A(0, -10.4, '🔫 Учёный: починить пушку', function () { fixGun(); }, 2.4, function () { return parts() >= 3 && !f().cFix; });
-    A(13, 24.2, '🛸 Сесть в машину-тарелку', function () { chaosRace(); }, 2.6, function () { return !!f().cFix && !f().cRide; });
+    A(16, 22.6, '🛸 Сесть в тарелку', function () { chaosRace(); }, 2.8, function () { return !!f().cFix && !f().cRide; });
   }
-  async function roofPart() { var k = K.ch; await cutscene(async function () { var y0 = 0; await anim(900, function (u) { player.ovr = { x: k.ox + 21.5, y: u * 6.4, z: k.oz - 7 }; }); F().pRoof = true; N.partRoof.visible = false; sfx('coin'); await say([['gus', 'Я лечу! Без крыльев! То есть с крыльями, но я и раньше с ними был.']]); await anim(900, function (u) { player.ovr = { x: k.ox + 21.5, y: 6.4 * (1 - u), z: k.oz - 5.6 }; }); player.ovr = null; placeA(player, k.ox + 21, k.oz - 5); save(); }); toast('⚙️ Деталь ' + parts() + '/3', 1800); chaosObj(); }
+  async function roofPart() { var k = K.ch; await cutscene(async function () { var sx = player.pos.x, sz = player.pos.z; await anim(900, function (u) { player.ovr = { x: sx + (k.ox + 22.5 - sx) * u, y: u * 6.4, z: sz + (k.oz - 7 - sz) * u }; }); F().pRoof = true; N.partRoof.visible = false; N.roofMark.visible = false; sfx('coin'); await say([['gus', 'Я лечу! Без крыльев! То есть с крыльями, но я и раньше с ними был.']]); await anim(900, function (u) { player.ovr = { x: k.ox + 22.5, y: 6.4 * (1 - u), z: k.oz - 7 + (3.6 * u) }; }); player.ovr = null; placeA(player, k.ox + 22.5, k.oz - 3.4); save(); }); toast('⚙️ Деталь ' + parts() + '/3', 1800); chaosObj(); }
   async function fountPart() { await cutscene(async function () { await say([['sys', 'Котлеты сыплются в фонтан. Вода поднимается. Деталь всплывает прямо к Марье.'], ['marya', 'Поймала. Мокрая и пахнет котлетой. Как всё в этой жизни.']]); }); F().pFount = true; N.partFount.visible = false; sfx('coin'); save(); toast('⚙️ Деталь ' + parts() + '/3', 1800); chaosObj(); }
   async function dkPart() {
     await cutscene(async function () {
@@ -550,20 +592,34 @@
     chaosObj();
   }
   async function chaosRace() {
-    var k = K.ch, f = F(); if (R) return;
-    await cutscene(async function () { await T.go(CH, 120, 4, PI, '🛸 Тарелка завелась'); await say([['gus', 'Шоссе! И сзади… смерч?'], ['marya', 'Сзади всегда что-то. Жми!']]); });
-    var evT = 0; W.evI = -1;
-    var r = await ride({ K: { ox: k.ox + 120, oz: k.oz, g: k.g }, z0: 0, z1: -240, w: 7, speed: 12, cs: 11.2, gap: 15, hz: N.trackC, mesh: N.ufoCar, chaser: N.wave, y: 1, dist: 10, pitch: .28,
-      title: '🛸 Гонка Хаоса', chaseName: 'смерч', hitTxt: '🚧 Бах!', failTxt: '🌪️ Смерч догнал!', intro: '🛸 Рули ⬅️ ➡️. События меняют управление каждые 6 секунд — следи за табличкой!',
-      onTick: function (dt) { evT -= dt; if (evT <= 0) { evT = 6; W.evI++; evPaint(); R.inv = W.ev === 'goose'; R.steerMul = W.ev === 'low' ? .55 : 1; R.spMul = W.ev === 'disco' ? 1.15 : 1; toast('🌪️ ' + ({ low: '🪶 НИЗКАЯ ГРАВИТАЦИЯ — тарелка плывёт, руль вялый', disco: '🪩 ДИСКОТЕКА — всё быстрее!', goose: '🦢 ГУСЬ ЗА РУЛЁМ — управление наоборот!', rain: '🍖 ДОЖДЬ ИЗ КОТЛЕТ — держись!' })[W.ev], 1800); } } });
-    R = null; f.cRide = true; save();
-    await cutscene(async function () {
-      var p0 = { x: player.pos.x, z: player.pos.z }; sfx('whoosh');
-      await anim(1300, function (u) { player.ovr = { x: p0.x, y: Math.sin(u * PI) * 7, z: p0.z - u * 22 }; });
-      await say([['sys', 'Трамплин. Тарелка взлетает. Внизу — дыра, и впервые она голубая. Как небо дома.'], ['marya', 'Держись, Гусь.'], ['gus', 'Я держусь за тебя уже три вселенные.']]);
-      player.ovr = null;
-    });
-    await jumpHole(k, 120, -270, '🕳️ Тишина. Пахнет… чаем?');
+    var k = K.ch, f = F(); if (R || W.busy) return; W.busy = true;
+    try {
+      // взлёт: герои под куполом, тарелка поднимается над неоновым городом
+      await cutscene(async function () {
+        var u0 = N.ufoCar.position.clone ? N.ufoCar.position.clone() : { x: N.ufoCar.position.x, y: N.ufoCar.position.y, z: N.ufoCar.position.z };
+        await T.walk(player, k.ox + 16, k.oz + 22.4, 4); 
+        await say([['pilot', 'Купол закрывается. Руки внутрь. Крылья — тоже внутрь.'], ['gus', 'Я не влезу.'], ['pilot', 'Влезешь. Я возил в ней карася.']]);
+        await T.shotTo(CH, 6, 5, 40, 16, 4, 27, 900);
+        await anim(2600, function (u) { var e = u * u, y = 1.6 + e * 46; N.ufoCar.position.y = y; N.ufoCar.rotation.y = u * 6; player.ovr = { x: k.ox + 15.4, y: y + .6, z: k.oz + 27 }; comp.pos.set(k.ox + 16.6, 0, k.oz + 27.2); comp.g.position.set(comp.pos.x, y + .6, comp.pos.z); });
+        await say([['sys', 'Тарелка свечой уходит вверх. Неоновый город становится точкой. Облака. Потом — темнота и звёзды.'], ['marya', 'Мы… в космосе.'], ['gus', 'Марья. Я гусь. Гуси не летают в космос. Я — первый.']]);
+        await fade(1, 700, '🚀 Выше облаков…'); N.ufoCar.position.y = 1.6; N.ufoCar.rotation.y = 0; player.ovr = null;
+        T.shotOff(10); await wait(200);
+      });
+      setArea(SP); placeA(player, K.sp.ox, K.sp.oz, PI); showComp(K.sp.ox + 1, K.sp.oz + .6); await fade(0, 700);
+      await cutscene(async function () { await say([['sys', 'Впереди, среди звёзд, светится голубая дыра. Вокруг — астероиды и обломки всех миров, где вы были.'], ['pilot', '*по рации* Рулите вверх-вниз и влево-вправо! Смерч Хаоса идёт за вами!'], ['marya', 'Держись, Гусь.']]); });
+      W.evI = -1; var evT = 0;
+      await ride({ K: K.sp, z0: 0, z1: -436, w: 9, speed: 13, cs: 12.2, gap: 18, hz: N.trackSp, mesh: N.ship, chaser: N.wave2, fly: true, y0: 9, ymin: 2.5, ymax: 17.5, dist: 12, pitch: .16, cx: .7, cz2: .5,
+        title: '🛸 Полёт к дыре', chaseName: 'смерч Хаоса', hitTxt: '☄️ Астероид!', failTxt: '🌪️ Смерч догнал!', intro: '🛸 ⬅️ ➡️ и ⬆️ ⬇️ (джойстик или WASD) — рули. Бег — ускорение. ⚡ — рывок.',
+        onTick: function (dt) { evT -= dt; if (evT <= 0) { evT = 7; W.evI++; evPaint(); R.inv = W.ev === 'goose'; R.steerMul = W.ev === 'low' ? .6 : 1; R.spMul = W.ev === 'disco' ? 1.15 : 1; toast('🌪️ ' + ({ low: '🪶 НИЗКАЯ ГРАВИТАЦИЯ — тарелку уносит, руль вялый', disco: '🪩 ДИСКОТЕКА — всё быстрее!', goose: '🦢 ГУСЬ ЗА РУЛЁМ — управление наоборот!', rain: '🍖 ДОЖДЬ ИЗ КОТЛЕТ — даже в космосе' })[W.ev], 1900); } } });
+      f.cRide = true; save();
+      // влёт в дыру
+      await cutscene(async function () {
+        var p0 = { x: N.ship.position.x, y: N.ship.position.y, z: N.ship.position.z }, hx = K.sp.ox, hy = 10, hz = K.sp.oz - 452; sfx('whoosh');
+        await anim(1800, function (u) { var e = u * u, s = Math.max(.05, 1 - e * .95), x = p0.x + (hx - p0.x) * e, y = p0.y + (hy - p0.y) * e, z = p0.z + (hz - p0.z) * e; N.ship.position.set(x, y, z); N.ship.scale.setScalar(.7 * s); N.ship.rotation.y += .2; player.ovr = { x: x, y: y + .6 * s, z: z }; player.g.scale.setScalar(s); comp.g.position.set(x + .7 * s, y + .6 * s, z + .4 * s); comp.g.scale.setScalar(s); });
+        await say([['marya', 'Держись за меня, Гусь.'], ['gus', 'Я держусь за тебя уже три вселенные.']]);
+        await fade(1, 900, '🕳️ Тишина. Пахнет… чаем?'); N.ship.visible = false; N.ship.scale.setScalar(.7); player.ovr = null; player.g.scale.setScalar(1); comp.g.scale.setScalar(1); await wait(600);
+      });
+    } finally { W.busy = false; }
     var q = Q(); q.part = 4; save(); chaiOn(true); await partHome();
   }
 
@@ -603,6 +659,12 @@
     A(function () { return HOME.c; }, '🎤 Собраться во дворе', function () { homeGathering(); }, 3, function () { return homeChecksDone() && !F().hSpeech; });
     A(function () { return FLAT_DOOR; }, '🏠 Домой. На кухню.', function () { homeKitchen(); }, 2.6, function () { return !!F().hSpeech && !F().hEnd; });
   }
+  /* «почти дом» встречает летним рассветом: лето, 6:00, ясно */
+  function dawn() {
+    try { if (typeof applySeason === 'function') applySeason('summer'); else WORLD.season = 'summer'; } catch (e) { }
+    try { WORLD.t = 6; WORLD.weather = 'clear'; WORLD.wLeft = 9; } catch (e) { }
+    W.dawn = true;
+  }
   function homeOn() { var q = Q(); return q.part === 4 && !!T.lvl && area === 'city'; }
   function homeChecksDone() { var f = F(); return !!(f.hPhone && f.hPig && f.hLight); }
   function homeShow(v) {
@@ -612,7 +674,7 @@
     try { if (v) { if (!W.narHid) { W.narHid = { h: narmina.hidden, v: narmina.g.visible }; narmina.hidden = true; narmina.g.visible = false; } } else if (W.narHid) { narmina.hidden = W.narHid.h; narmina.g.visible = W.narHid.v; W.narHid = null; } } catch (e) { }
   }
   async function partHome() {
-    T.begin(15); L = T.lvl; homeBuild(); homeShow(true);
+    T.begin(15); L = T.lvl; homeBuild(); homeShow(true); dawn();
     await T.moveTo('city', 3.6, 7.5, PI, '');
     var f = F();
     if (!f.hIntro) await cutscene(async function () {
@@ -685,10 +747,10 @@
       await cutscene(async function () {
         await say([['sys', 'Кухня. Та же кухня. Те же кружки. Чайник шумит.'], ['marya', 'Гусь. Это не наш мир.'], ['gus', 'Я знаю.'], ['marya', 'Но тут Нармина. Тут бабушка. Тут голубь. Тут Максим лежал в луже. Тут светофор сказал «да».'],
           ['gus', 'И Антон тут есть. Не наш. Но шмыгает так же.'], ['marya', 'Мы можем искать дальше. Ещё батоны, ещё дыры, ещё миры.'], ['sys', 'Гусь долго смотрит в кружку.'], ['gus', '…Ну.'], ['gus', 'Чай так чай.'], ['marya', 'Чай так чай.']]);
-        await fade(1, 1400, '🫖 Чэай~ так чэай~'); await wait(2400);
+        await T.card('🫖 Чэай~ так чэай~');
         var titles = ['🥖 Антон-Батон — дома, в хлебном мире. Охраняет короля.', '🧾 Касса №13 — взорвалась чеками. Больше ничего не списывает.', '💳 5 000 000 баллов Максима — ушли на Сияющий батон.', '🧪 Учёный — в мире Хаоса. Наконец свой.', '🛸 Пилот, карась и «Добрый кола» — там же. Им хорошо.', '🐦 Голубь — сказал всё, что знал.', '🚦 Светофор — сказал «ДА».', '👨 Максим — в луже. Изменился.', '🪿👩 Марья и Гусь — дома. Почти. Почти считается.'];
-        for (var i = 0; i < titles.length; i++) { await fade(1, 300, titles[i]); await wait(1900); }
-        await fade(1, 600, 'МГИАГ · Конец истории про дыру'); await wait(2600);
+        for (var i = 0; i < titles.length; i++) await T.card(titles[i]);
+        await T.card('МГИАГ · Конец истории про дыру');
       });
       f.hEnd = true; Q().done = true; S.q.w15 = true; save(); homeShow(false); T.endLvl(); L = null;
       placeA(player, FLAT_DOOR.x + 1, FLAT_DOOR.z + 3, 0); setArea('city'); showComp(FLAT_DOOR.x + 2.4, FLAT_DOOR.z + 3.4); await fade(0, 800);

@@ -1,0 +1,9 @@
+<!doctype html><html><body><script src="mini-three.js"></script><script>
+var scene=new THREE.Scene(),cityG=new THREE.Group();scene.add(cityG);var camera=new THREE.PerspectiveCamera(60,1,.1,620);var fog=new THREE.Fog(0,50,390);var area='city',worldReady=true,player={g:new THREE.Group()},comp={g:new THREE.Group()};
+window.MG_CULL=420;var envN=0;function updEnv(){envN++;}
+function obj(x,z,kind){let o;if(kind==='group'){o=new THREE.Group();const m=new THREE.Mesh(new THREE.BoxGeometry(),{});m.scale.set(2,1,4);o.add(m);const m2=new THREE.Mesh(new THREE.BoxGeometry(),{});m2.position.set(0,1,0);o.add(m2);}else if(kind==='sprite'){o=new THREE.Sprite({});o.scale.set(1,1,1);}else{o=new THREE.Mesh(new THREE.BoxGeometry(),{});o.scale.set(1,1,1);}o.position.set(x,0,z);cityG.add(o);return o;}
+var near=obj(20,0,'group'),far=obj(300,0,'group'),farS=obj(0,260,'sprite'),mid=obj(0,140),huge=obj(-250,0);huge.scale.set(80,10,80);
+var merged=obj(500,0);merged.userData.merged=true;var hiddenByGame=obj(280,10,'group');hiddenByGame.visible=false;
+cityG.add(player.g);player.g.add(new THREE.Mesh(new THREE.BoxGeometry(),{}));player.g.position.set(400,0,0);
+var area2=new THREE.Group();area2.userData.area='p15_x';scene.add(area2);var inArea=new THREE.Mesh(new THREE.BoxGeometry(),{});inArea.position.set(5000,0,0);area2.add(inArea);
+</script><script src="../proj/v117-perf.js"></script></body></html>

@@ -284,7 +284,7 @@
     if (panel) return;
     panel = el('div'); panel.id = 'mgset';
     var box = el('div'); box.className = 'box';
-    var head = el('header'); head.appendChild(el('h1', '', '⚙️ Настройки · v1.16.0'));
+    var head = el('header'); head.appendChild(el('h1', '', '⚙️ Настройки · v1.18.0'));
     var x = el('button'); x.className = 'x'; x.textContent = '✕'; x.onclick = closePanel; head.appendChild(x);
     nav = el('nav'); body = el('div'); body.className = 'body';
     box.appendChild(head); box.appendChild(nav); box.appendChild(body); panel.appendChild(box); document.body.appendChild(panel);
@@ -341,6 +341,15 @@
     b.appendChild(tog('Сглаживание краёв (MSAA)', aaWant === aaNow ? 'Применяется при запуске игры.' : '⚠️ Изменение вступит в силу после перезапуска игры.', aaWant, function () { try { localStorage.setItem('mg_aa', aaWant ? '0' : '1'); } catch (e) { } renderPanel(); }));
     if (aaWant !== aaNow) { var rb = el('button'); rb.className = 'bt2'; rb.textContent = '🔄 Перезапустить сейчас'; rb.onclick = function () { try { if (typeof fullSave === 'function') fullSave(false); } catch (e) { } location.reload(); }; b.appendChild(rb); }
     b.appendChild(tog('Показывать FPS', '', O.fps, function () { G.setOpt('fps', !O.fps); renderPanel(); }));
+    var PF = window.MG_PERF;
+    if (PF) {
+      b.appendChild(H('Оптимизация'));
+      b.appendChild(tog('Не рисовать далёкие мелкие объекты', 'Машины, фонари, вывески, люди вдали не отрисовываются. Заметно ускоряет игру.', PF.on, function () { PF.set(!PF.on); renderPanel(); }));
+      if (PF.on) {
+        b.appendChild(slider('📏 Дальность мелких объектов', PF.dist, 60, 320, 10, function (v) { return Math.round(v) + ' м'; }, function (v, live) { if (!live) PF.setDist(v); }));
+        b.appendChild(tog('Не рисовать то, что скрыто туманом', 'Ночью, в туман и дождь дальность сама уменьшается.', PF.fog, function () { PF.setFog(!PF.fog); renderPanel(); }));
+      }
+    }
     if (hd) {
       b.appendChild(H('Улучшенная графика'));
       b.appendChild(tog('Текстуры карты', 'Зернистость и детали на земле, стенах, дорогах.', O.texMap, function () { G.setOpt('texMap', !O.texMap); renderPanel(); }));
@@ -414,7 +423,7 @@
       r.appendChild(y); r.appendChild(n); b.appendChild(r);
     }
     b.appendChild(H('О версии'));
-    b.appendChild(el('div', 'hint', 'МГИАГ 1.16.0 «Новые дела». Настройки хранятся на этом устройстве и сохраняются между запусками.'));
+    b.appendChild(el('div', 'hint', 'МГИАГ 1.18.0 «Новые дела». Настройки хранятся на этом устройстве и сохраняются между запусками.'));
   }
   function resetAll() {
     var G = GFX(); if (G) { G.reset(); G.set('classic'); G.setOpt('distC', 1); G.setOpt('res', 1); }
