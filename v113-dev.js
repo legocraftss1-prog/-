@@ -85,6 +85,7 @@
     DC(b, '🥩 «Тайна Дикси и Светофора» — с начала', function () { prep('svet'); closeModal(); enterFlat(false); }, 'старт: кухня в квартире');
     DC(b, '♻️ Сбросить все новые дела 1.13', function () { newQ().forEach(function (q) { S.q[q[0]] = false; }); S.p13 = {}; setTimeout(function () { location.reload(); }, 600); }, 'перезапуск игры');
     if (window.MG_L14) storyL14(b);
+    if (window.MG_L15) storyL15(b);
     var L = T.lvl;
     if (L && L.n === 1 && window.MG_L1) storyL1(b);
     if (window.MG_L2 && S.q.points && !S.q.chek) storyL2(b);
@@ -99,6 +100,23 @@
     if (id === 'chek' && window.MG_L2) { var K2 = MG_L2.K2; if (K2.receipt && K2.kb) { K2.kb.g.remove(K2.receipt); K2.receipt = null; } }
     if (window.MG_STORY) MG_STORY.lvl = null;
     comp.hidden = false;
+  }
+  function storyL15(b) {
+    var M = MG_L15, q = M.Q(), f = q.f, d = M.dev, R = M.ride();
+    phSec(b, '🫖 Сюжетка №15 «Чэай~» (тест, только здесь) — часть ' + (q.part || 0) + '/4' + (q.done ? ' · пройдена' : ''));
+    phLine(b, 'В обычной игре этой сюжетки нет: ни в «Списке дел», ни в мире. Части: 1 — хлебный мир, 2 — мир Светофора, 3 — мир Хаоса, 4 — почти дом.', 12);
+    DC(b, '🍞 Часть 1 — хлебный мир (с начала)', function () { closeModal(); setTimeout(function () { d.start(1); }, 60); }, 'прогресс сюжетки №15 сбрасывается');
+    DC(b, '🚦 Часть 2 — мир Светофора', function () { closeModal(); setTimeout(function () { d.start(2); }, 60); });
+    DC(b, '🌪️ Часть 3 — мир Хаоса', function () { closeModal(); setTimeout(function () { d.start(3); }, 60); });
+    DC(b, '🏠 Часть 4 — почти дом', function () { closeModal(); setTimeout(function () { d.start(4); }, 60); });
+    if (q.part) D(b, '▶️ Продолжить с текущей части', function () { closeModal(); setTimeout(function () { d.resume(); }, 60); });
+    D(b, '⏩ Пропустить заезд / бой у кассы / охрану теста', function () { var r = d.skip(); say_(r ? '⏩ Пропущено' : 'Сейчас нечего пропускать', 1400); });
+    if (q.part === 1) D(b, '🍞 Выпечка готова (сразу к королю)', function () { d.flags(['bIntro', 'bKing', 'bKnead', 'bGuard', 'bBake']); });
+    if (q.part === 2) D(b, '🎫 Все три купона', function () { d.flags(['sIntro', 'cHigh', 'cLow', 'cMax']); });
+    if (q.part === 3) D(b, '⚙️ Все три детали', function () { d.flags(['cIntro', 'pRoof', 'pFount', 'pDk']); });
+    if (q.part === 4) D(b, '🔎 Все проверки «это дом?»', function () { d.flags(['hIntro', 'hReveal', 'hPhone', 'hPig', 'hLight']); });
+    T_(b, '🫖 «Чэай~» вместо «чай» в репликах', !!q.chai, function (v) { d.chai(v); });
+    DC(b, '♻️ Сбросить сюжетку №15', function () { d.reset(); closeModal(); }, 'перенос к подъезду, «чэай~» выключается');
   }
   function storyL14(b) {
     var M = MG_L14, q = M.Q(), f = q.f, d = M.dev;
