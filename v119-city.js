@@ -455,10 +455,44 @@
   /* =====================================================================
      ЗАПУСК
      ===================================================================== */
+  /* ---------- мелочи у стен и в углах: бумажки, банки, коробки, пакеты, листья, лужи ---------- */
+  function litter() {
+    var n = 0, ITEMS_ = ['paper', 'paper', 'ball', 'can', 'box', 'flat', 'bag', 'leaves', 'puddle', 'cup', 'bottle', 'news'];
+    (C.rects || []).forEach(function (r) {
+      var x = r[0], z = r[1], w = r[2], d = r[3], ry = r[4]; if (region(x, z) === 'N' || R() < .45) return;
+      var k = 1 + Math.floor(R() * 2);
+      for (var c = 0; c < k; c++) {
+        var sx = R() < .5 ? -1 : 1, sz = R() < .5 ? -1 : 1, p = loc(x, z, ry, sx * (w / 2 + rr(.3, .9)), sz * (d / 2 + rr(.3, .9))), px = p[0], pz = p[1];
+        if (!A.outside(px, pz) || A.isWater(px, pz) || nearRoad(px, pz, .4)) continue;
+        var y = H(px, pz), cnt = 1 + Math.floor(R() * 3);
+        for (var i = 0; i < cnt; i++) {
+          var t = pk(ITEMS_), ox = px + rr(-.8, .8), oz = pz + rr(-.8, .8), oy = H(ox, oz), a = rr(0, PI * 2);
+          if (t === 'paper') M_(cityG, G.box, pk([0xf4f4ee, 0xe8e4d8, 0xfff8d0]), [rr(.2, .32), .01, rr(.28, .4)], [ox, oy + .02, oz], [rr(-.1, .1), a, rr(-.1, .1)]);
+          else if (t === 'news') { M_(cityG, G.box, 0xd8d4c8, [.45, .02, .32], [ox, oy + .02, oz], [0, a, 0]); M_(cityG, G.box, 0x6a6a6a, [.3, .021, .06], [ox, oy + .025, oz], [0, a, 0]); }
+          else if (t === 'ball') M_(cityG, G.sph, 0xf0eee6, [.16, .14, .16], [ox, oy + .07, oz]);
+          else if (t === 'can') M_(cityG, G.cyl, pk([0xd8342a, 0x9aa0a8, 0x2a6ad8, 0x2fae5b]), [.13, .24, .13], [ox, oy + .07, oz], [PI / 2, a, 0]);
+          else if (t === 'bottle') M_(cityG, G.cyl, pk([0x3a8a4a, 0x8a5a2a]), [.14, .5, .14], [ox, oy + .07, oz], [PI / 2, a, 0]);
+          else if (t === 'cup') M_(cityG, G.cyl, pk([0xffffff, 0xd84a6a, 0xf2c230]), [.16, .2, .14], [ox, oy + .07, oz], [PI / 2, a, 0]);
+          else if (t === 'box') { var s_ = rr(.4, .8); M_(cityG, G.box, pk([0xb8925a, 0xa8824a, 0xc8a26a]), [s_, s_ * .8, s_], [ox, oy + s_ * .4, oz], [0, a, 0]); M_(cityG, G.box, 0x8a6a3a, [s_ * 1.01, .03, .08], [ox, oy + s_ * .8, oz], [0, a, 0]); }
+          else if (t === 'flat') M_(cityG, G.box, 0xb8925a, [rr(.8, 1.2), .03, rr(.6, .9)], [ox, oy + .03, oz], [0, a, 0]);
+          else if (t === 'bag') M_(cityG, G.sph, pk([0x1d1d1d, 0x2a2a2a, 0x3a4a3a]), [rr(.5, .7), rr(.45, .6), rr(.5, .7)], [ox, oy + .25, oz]);
+          else if (t === 'leaves') for (var l = 0; l < 6; l++) M_(cityG, G.box, pk([0xc8782a, 0xa85a1a, 0xd8a83a, 0x7a5a2a]), [.12, .01, .08], [ox + rr(-.4, .4), oy + .02, oz + rr(-.4, .4)], [0, rr(0, 3), 0]);
+          else if (t === 'puddle') M_(cityG, G.cyl, 0x4a5a6a, [rr(.8, 1.6), .01, rr(.6, 1.2)], [ox, oy + .015, oz]);
+          n++;
+        }
+      }
+    });
+    // одиночные бумажки на тротуарах — редко
+    A.RD.forEach(function (r) { if (!r.P || r.w < 6) return; var L = A.resample(r.P, 23); L.forEach(function (p, i) { if (R() > .18 || region(p[0], p[1]) === 'N' || !A.outside(p[0], p[1]) || !L[i + 1]) return; var q = L[i + 1], a = Math.atan2(q[0] - p[0], q[1] - p[1]), s = R() < .5 ? 1 : -1, o = r.w / 2 + rr(1, 3.5), x = p[0] + Math.cos(a) * o * s, z = p[1] - Math.sin(a) * o * s;
+      if (A.isWater(x, z)) return; M_(cityG, G.box, pk([0xf4f4ee, 0xe8e4d8, 0xfff8d0]), [rr(.18, .3), .01, rr(.24, .36)], [x, H(x, z) + .28, z], [rr(-.1, .1), rr(0, 6), 0]); n++; }); });
+    C.stats.litter = n;
+  }
+  C.h = { rectOK: function () { return rectOK.apply(null, arguments); }, fbox: fbox, fmat: fmat, TX: null, sg: sg, loc: loc, lohi: lohi, grp: grp, box: box, col: col };
   C.build = function (api) {
     A = api; R = api.R; rr = api.rr; pk = api.pk; RECENT.length = 0; RES.length = 0; usedText = {}; C.stats = {}; C.rects = [];
-    tex();
-    var steps = [['siti', siti], ['elevated', elevated], ['gantries', gantries], ['furniture', streetFurniture], ['billboards', billboards], ['waterTowers', waterTowers], ['courts', courts], ['lots', lots]];
+    tex(); C.h.TX = TX;
+    var shops = function () { if (window.MG_SHOPS && MG_SHOPS.place) MG_SHOPS.place(A, C.h); };
+    var steps = [['siti', siti], ['elevated', elevated], ['gantries', gantries], ['furniture', streetFurniture], ['billboards', billboards], ['waterTowers', waterTowers], ['courts', courts], ['shops', shops], ['lots', lots], ['litter', litter]];
     steps.forEach(function (s) { try { s[1](); } catch (e) { console.error('[CITY ' + s[0] + ']', e); (C.stats.err = C.stats.err || []).push(s[0] + ': ' + e.message); } });
     A.stats.city = C.stats;
   };

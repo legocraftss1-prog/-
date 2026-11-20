@@ -101,20 +101,41 @@ T(c19.stats.signals>20&&c19.stats.stops>10&&c19.stats.gantries>8,'светофо
 T(c19.seam[0]>1000&&c19.seam[1]<=-759&&c19.seam[2]>=759,'полоса-шов под бывшим забором по всему периметру',c19.seam);
 const kinds=['office','rowhouse','apartment','corner','warehouse','gas','diner','motel','strip','bigbox','fastfood','dealer','fire','school','church','bank','hotel','deco','garage','campus'];
 T(kinds.filter(k=>c19.stats[k]>0).length>=18,'разнообразие: типов зданий '+kinds.filter(k=>c19.stats[k]>0).length+' из '+kinds.length,kinds.filter(k=>!c19.stats[k]));
-// трава
-const gr=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));area='city';WORLD.season='summer';groundSnow=0;groundSnowT=0;GAG.t=1e9;MG_LOOK.setGrass('normal');
-  placeA(player,-160,860,0);await W(2500);const st=MG_LOOK.stat();
-  // ни одной травинки на дороге и в доме
-  let onRoad=0,inBld=0,n=0;const m=document&&null;
-  return {st};});
-T(gr.st.visible&&gr.st.shown>500,'трава растёт вокруг игрока: пучков '+gr.st.shown,gr.st);
-const gr2=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));let bad=0,n=0;
-  // проверяем сами точки маски вокруг игрока
-  for(let x=-200;x<-120;x+=1.3)for(let z=820;z<900;z+=1.7){n++;}
-  return {n};});
-const gr3=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));groundSnow=1;await W(300);const a=MG_LOOK.stat().visible;groundSnow=0;MG_LOOK.setGrass('off');await W(300);const b=MG_LOOK.stat().grass;MG_LOOK.setGrass('dense');await W(1500);const c=MG_LOOK.stat();MG_LOOK.setGrass('normal');return {snowVis:a,off:b,dense:c};});
-T(!gr3.snowVis,'зимой (под снегом) трава спрятана',gr3);
-T(gr3.off===0&&gr3.dense.shown>gr.st.shown,'настройка травы: выкл убирает, густая гуще',gr3);
+// трава убрана (1.20)
+const noGrass=await pg.evaluate(()=>{let n=0;scene.traverse(o=>{if(o.isInstancedMesh&&o.material&&o.material.customProgramCacheKey&&o.material.customProgramCacheKey()==='mgGrass')n++;});return {n,api:typeof MG_LOOK.setGrass,set:JSON.stringify(MG_LOOK)}});
+T(noGrass.n===0&&noGrass.api==='undefined','трава полностью убрана (ни меша, ни настройки)',noGrass);
+// карта в телефоне: вся карта, зум, метка на новых землях
+const mp=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));const b=document.createElement('div');document.body.appendChild(b);MG_MAP.V=null;drawMap(b);const cv=b.querySelector('canvas.mgMap');const f=MG_MAP.fit();
+  const full={k:f.k,cx:f.cx,cz:f.cz,coverX:600/f.k};const btns=[...b.querySelectorAll('button')].map(x=>x.textContent);
+  const k0=MG_MAP.V.k;btns&&[...b.querySelectorAll('button')].find(x=>x.textContent==='＋').click();const k1=MG_MAP.V.k;
+  const ev=(t,x,y,id)=>{const r=cv.getBoundingClientRect();cv.dispatchEvent(new PointerEvent(t,{clientX:r.left+x*r.width/600,clientY:r.top+y*r.height/600,pointerId:id||1,bubbles:true}));};
+  const c0=MG_MAP.V.cx;ev('pointerdown',300,300);ev('pointermove',360,300);ev('pointerup',360,300);const c1=MG_MAP.V.cx;
+  // щипок
+  const kk=MG_MAP.V.k;ev('pointerdown',250,300,1);ev('pointerdown',350,300,2);ev('pointermove',200,300,1);ev('pointermove',400,300,2);ev('pointerup',200,300,1);ev('pointerup',400,300,2);const kp=MG_MAP.V.k;
+  // метка на новой земле (у Сити): переводим вид так, чтобы точка была в центре
+  S.mark=null;MG_MAP.V.cx=-860;MG_MAP.V.cz=20;MG_MAP.V.k=2;const renderPhone0=window.renderPhone;window.renderPhone=renderPhone=function(){};ev('pointerdown',300,300,3);ev('pointerup',300,300,3);window.renderPhone=renderPhone=renderPhone0;
+  const mk=S.mark;const water=MG_MAP.markOK(1290,-85);b.remove();return {full,btns,k0,k1,c0,c1,kk,kp,mk,water};});
+T(mp.full.coverX>=3400,'карта показывает всю землю целиком ('+Math.round(mp.full.coverX)+' м по ширине)',mp.full);
+T(mp.k1>mp.k0*1.4&&Math.abs(mp.c1-mp.c0)>5&&mp.kp>mp.kk*1.5,'приближение кнопкой и щипком, перетаскивание',mp);
+T(mp.mk&&Math.abs(mp.mk.x+860)<3&&Math.abs(mp.mk.z-20)<3&&mp.water==='вода','метка ставится на новых землях; в воду — нельзя',mp);
+// 17 точек: все стоят в городе, в каждую можно зайти, у каждой свои действия; прогоняем все действия
+const shops=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));S.money[player.id]=1e6;S.money.gus=1e6;S.money.marya=1e6;
+  const drain=async()=>{let clicks=0;for(let k=0;k<400;k++){if(typeof modalOpen!=='undefined'&&modalOpen){const bt=clicks>=3?null:[...document.querySelectorAll('#sheetBody button')].find(b=>!b.disabled&&/Купить|Надеть|Красить|Слушать|Обменять|Петь|Перевести|Добавить|Этот|Опустить|Рискнуть|Угостить|Взять|Завернуть/.test(b.textContent));if(bt&&!bt.__c){bt.__c=1;clicks++;bt.click();await W(80);continue;}const cls=document.querySelector('#sheetFoot button');if(cls){cls.click();await W(60);continue;}}
+    if(dlg.open){const b=document.querySelector('#dChoices button');if(b)b.click();else nextLine();await W(40);continue;}if(cut>0){await W(60);continue;}return;}};
+  const out={placed:MG_SHOPS.placed.length,acts:{},err:[],labels:new Set()};
+  for(const d of MG_SHOPS.DEFS){MG_SHOPS.enter(d.id);await W(1400);await drain();if(area!=='sh_'+d.id){out.err.push(d.id+': не зашли ('+area+')');continue;}
+    const list=inters.filter(o=>o.area==='sh_'+d.id&&!/Выйти/.test(o.label));out.acts[d.id]=list.length;list.forEach(o=>out.labels.add(o.label));
+    for(const o of list){try{o.act();}catch(e){out.err.push(d.id+': '+e.message);}await W(200);await drain();await W(100);await drain();}
+    const ex=inters.find(o=>o.area==='sh_'+d.id&&/Выйти/.test(o.label));ex.act();await W(1100);await drain();if(area!=='city')out.err.push(d.id+': не вышли');}
+  out.labels=out.labels.size;out.items=invOf().length;out.wardrobe=S.wardrobe[player.id].filter(k=>CLOTHES[k]&&CLOTHES[k].shop).length;out.st=S.shops20;return out;});
+console.log('  точки:',JSON.stringify({placed:shops.placed,acts:shops.acts,items:shops.items,wardrobe:shops.wardrobe,labels:shops.labels}));
+T(shops.placed===17,'все 17 точек стоят в новом городе',shops.placed);
+T(shops.err.length===0,'во все 17 можно зайти и выйти; все их действия отрабатывают без ошибок',shops.err);
+T(shops.labels>=29,'у точек разные действия: уникальных '+shops.labels,shops.labels);
+T(shops.wardrobe>=3&&shops.items>=5,'покупки работают (новые вещи в гардеробе и инвентаре)',shops);
+// мусор
+const lit=await pg.evaluate(()=>MG_CITY.stats.litter);
+T(lit>300,'мелочи в углах и на тротуарах: '+lit,lit);
 // тени и свет
 const sh=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));MG_LOOK.setShadows(true);await W(1500);const a={on:renderer.shadowMap.enabled,sun:sun.castShadow};let cast=0;scene.traverse(o=>{if(o.isMesh&&o.castShadow)cast++;});
   MG_LOOK.setShadows(false);await W(400);const b={on:renderer.shadowMap.enabled};MG_LOOK.setShadows(true);

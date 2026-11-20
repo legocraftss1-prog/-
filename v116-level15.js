@@ -1,6 +1,6 @@
 /* =====================================================================
    СЮЖЕТКА №15 — «ЧЭАЙ~»  (после «Дыры в центре города»)
-   ПОКА ДОСТУПНА ТОЛЬКО ЧЕРЕЗ DEV-ПАНЕЛЬ: в «Списке дел» и в мире её нет.
+   С 1.20 — часть основного сюжета: в «Списке дел» после №14, начинается у большой дыры возле хлебозавода.
    Дыра переносит между вселенными всё, что в неё упало; чтобы прыгнуть дальше, нужен Сияющий батон.
    1) Хлебный мир: «Великая выпечка» у Хлебного короля, лавина багетов (заезд на скейте), Антон остаётся дома.
    2) Мир Светофора: город-супермаркет, промоутер-Максим, три пропуска, погоня на тележке от Живого мяса,
@@ -8,7 +8,7 @@
    3) Мир Хаоса: события меняются каждые 10 секунд, детали для портальной пушки, гонка к трамплину;
       учёный остаётся там.
    4) Почти дом: тот же город, но все говорят «чэай~». Голубь, светофор и телефон, речь Максима, кухня.
-   Прогресс — в обычном сохранении (S.p13.w15). В основной сюжет (MAIN) не добавляется.
+   Прогресс — в обычном сохранении (S.p13.w15). DEV-кнопки для проверки остались.
    ===================================================================== */
 (function () {
   'use strict';
@@ -787,7 +787,18 @@
   function install() {
     if (done) return;
     if (typeof worldReady === 'undefined' || !worldReady || typeof makeAnton !== 'function' || typeof canSwitch !== 'function' || !T.actW || typeof gus === 'undefined' || typeof say !== 'function') return;
+    if (typeof MAIN === 'undefined' || !MAIN.some(function (m) { return m.id === 'baton14'; }) || typeof BREADF === 'undefined') return;
     done = true;
+    // основной сюжет: после «Дыры в центре города»
+    if (!MAIN.some(function (m) { return m.id === 'w15'; })) MAIN.push({ id: 'w15', icon: '🫖', title: 'Чэай~', who: 'Марья и Гусь · дыра у хлебозавода → другие вселенные → почти дом' });
+    var HX = BREADF.x + 10, HZ = BREADF.z + 32;
+    function mainAvail() { try { return !!(S.q && S.q.baton14 && !S.q.w15 && !T.lvl && !W.busy && area === 'city'); } catch (e) { return false; } }
+    T.actW('city', HX, HZ, function () { var q = Q(); return q.part ? '🕳️ Вернуться в дыру · «Чэай~» (часть ' + q.part + ' из 4)' : '🕳️ Прыгнуть в дыру за Сияющим батоном'; },
+      function () { var q = Q(); if (q.part) startPart(Math.max(1, q.part), false); else startPart(1, true); }, 4.2, mainAvail);
+    T.hints.push(function () {
+      if (!mainAvail()) return null; var q = Q();
+      return q.part ? { t: '🫖 «Чэай~»: вернуться в дыру у хлебозавода (часть ' + q.part + ' из 4).', p: { x: HX, z: HZ } } : { t: '🔴 Новое дело: «Чэай~». Дыра у хлебозавода всё ещё открыта — батон где-то там.', p: { x: HX, z: HZ } };
+    });
     if (typeof WHO !== 'undefined') { if (!WHO.sci) WHO.sci = ['Учёный', '#b8ff6a']; if (!WHO.raisa) WHO.raisa = ['Раиса Павловна', '#ffb0d0']; if (!WHO.cour) WHO.cour = ['Курьер', '#ffb36a']; if (!WHO.phone) WHO.phone = ['Голос в трубке', '#a9bad2']; }
     // «чэай~»: реплики, вопросы и уведомления
     var os = say; window.say = say = function (lines) { if (chaiActive() && Array.isArray(lines)) lines = lines.map(function (l) { return Array.isArray(l) ? [l[0], chai(l[1])].concat(l.slice(2)) : l; }); return os.apply(this, [lines].concat([].slice.call(arguments, 1))); };
@@ -797,7 +808,7 @@
     var cs = canSwitch; window.canSwitch = canSwitch = function () { if (L && myArea() && !R) return !blocked() && !player.lock && player.pose !== 'fall'; return cs(); };
     var pe = updEnv; window.updEnv = updEnv = function (dt, t) { pe(dt, t); try { tick(dt, t); } catch (e) { console.error('[LEVEL15]', e); } };
     try { homeBuild(); } catch (e) { console.error('[LEVEL15 home]', e); }
-    console.log('[LEVEL15] сюжетка №15 подключена (только через DEV-панель)');
+    console.log('[LEVEL15] сюжетка №15 подключена (основной сюжет после №14)');
   }
   var iv = setInterval(function () { try { install(); if (done) clearInterval(iv); } catch (e) { console.error('[LEVEL15 install]', e); clearInterval(iv); } }, 400);
 

@@ -21,9 +21,9 @@ let pass=0,fail=0;const ok=(c,n,x)=>{c?pass++:fail++;console.log(c?'  ✔':'  �
  });
  const st=()=>pg.evaluate(()=>({area,part:M.Q().part,f:Object.assign({},M.F()),lvl:MG_STORY.lvl&&MG_STORY.lvl.n,obj:objective().t}));
 
- console.log('[A] Только через DEV-панель');
- let A=await pg.evaluate(()=>({main:MAIN.some(m=>/w15|Чэай/i.test(m.id+m.title)),q:S.p13&&S.p13.w15,homePts:inters.filter(o=>o.label&&/Нармина|Позвонить себе|Спросить голубя|Собраться во дворе/.test(o.label)&&!o.area).map(o=>pOf(o)).filter(Boolean).length,chai:M.chaiActive(),hidden:Object.values(M.HOME.npcs).every(a=>a.hidden&&!a.g.visible),say:(say([['gus','Чай будешь?']]),spoke.slice(-1)[0][1])}));
- ok(!A.main&&!A.q&&A.homePts===0&&!A.chai&&A.hidden&&A.say==='Чай будешь?','в обычной игре сюжетки нет: ни в «Списке дел», ни точек в мире; «чай» остаётся «чаем»',A);
+ console.log('[A] Основной сюжет: после №14, вход у дыры возле хлебозавода');
+ let A=await pg.evaluate(()=>({main:MAIN.some(m=>m.id==='w15'),after:MAIN.findIndex(m=>m.id==='w15')===MAIN.findIndex(m=>m.id==='baton14')+1,entry:(()=>{const o=inters.find(o=>typeof o.label==='function'&&/дыру/.test(o.label()));if(!o)return 'нет';const was=S.q.baton14;S.q.baton14=false;const lock=o.ok();S.q.baton14=true;const open=o.ok();S.q.baton14=was;return {lock,open,label:o.label()};})(),q:S.p13&&S.p13.w15,homePts:inters.filter(o=>o.label&&/Нармина|Позвонить себе|Спросить голубя|Собраться во дворе/.test(o.label)&&!o.area).map(o=>pOf(o)).filter(Boolean).length,chai:M.chaiActive(),hidden:Object.values(M.HOME.npcs).every(a=>a.hidden&&!a.g.visible),say:(say([['gus','Чай будешь?']]),spoke.slice(-1)[0][1])}));
+ ok(A.main&&A.after&&A.entry&&A.entry.lock===false&&A.entry.open===true&&(!A.q||!A.q.part)&&A.homePts===0&&!A.chai&&A.hidden&&A.say==='Чай будешь?','сюжетка в «Списке дел» сразу после №14; вход у дыры закрыт до финала №14 и открыт после; «чай» остаётся «чаем» до части 4',A);
 
  console.log('[B] Часть 1 — хлебный мир');
  let B=await pg.evaluate(async()=>{const n=spoke.length;M.dev.start(1);await ticks(3);await idle();const k=M.K.br,X=x=>k.ox+x,Z=z=>k.oz+z;const r={area,lines:spoke.slice(n).map(l=>l[0]+': '+l[1]),obj:objective().t,cars:CARS};

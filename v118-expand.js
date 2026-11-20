@@ -563,7 +563,7 @@
       try { buildRoadGraph(); } catch (e) { } try { if (typeof buildRoadIndex === 'function') buildRoadIndex(); } catch (e) { }
       try { mapBase = null; } catch (e) { } radarHook();
     }
-    cutSet(on); oldTilesKeep(on); try { if (window.MG_LOOK && MG_LOOK.refreshGrass) MG_LOOK.refreshGrass(); } catch (e) { }
+    cutSet(on); oldTilesKeep(on);
     // первый раз: подсказать, что забора больше нет (когда закончатся титры и сцены)
     try { if (on && E.force === null && !(S.p13 && S.p13.exSeen)) { S.p13 = S.p13 || {}; S.p13.exSeen = true; try { saveGame(); } catch (e) { }
       var tip = setInterval(function () { try { if (started && area === 'city' && !blocked()) { clearInterval(tip); setTimeout(function () { toast('🏝️ Забора больше нет. За городом — целый полуостров: озеро и гора на севере, порт и парк на востоке, река и деревня на западе, посёлок «Чэайное» и море на юге.', 7000); }, 2500); } } catch (e) { clearInterval(tip); } }, 1000); } } catch (e) { }

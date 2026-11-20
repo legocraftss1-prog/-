@@ -6,12 +6,12 @@ let pass=0,fail=0;const ok=(c,n,x)=>{c?pass++:fail++;console.log(c?'  ✔':'  �
   window.MG_L15={Q:()=>q,ride:()=>null,dev:{start(n){calls.push('start'+n);},resume(){calls.push('resume');},skip(){calls.push('skip');return 'ride';},flags(l){calls.push('flags:'+l.join(','));},reset(){calls.push('reset');},chai(v){calls.push('chai:'+v);q.chai=v;}}};
   devTab='story';renderPhone();const txt=document.getElementById('sheetBody').textContent;const rows=()=>[...document.querySelectorAll('#sheetBody .inv')];
   const click=s=>{const x=rows().find(r=>r.textContent.includes(s));if(!x)return false;x.querySelector('button').click();return true;};
-  const res={sec:/Сюжетка №15 «Чэай~» \(тест, только здесь\) — часть 3\/4/.test(txt)};
+  const res={sec:/Сюжетка №15 «Чэай~» — часть 3\/4/.test(txt)};
   res.c=[click('Продолжить с текущей части'),click('Пропустить заезд'),click('Все три детали')];
   click('Часть 2 — мир Светофора');res.armed=calls.indexOf('start2')<0;devTab='story';renderPhone();click('Часть 2 — мир Светофора');
   return {res,calls,txt:txt.slice(0,80)};});
  await pg.waitForTimeout(300);r.calls=await pg.evaluate(()=>window.__calls.slice());
- ok(r.res.sec,'в DEV есть раздел сюжетки №15 с пометкой «только здесь» и номером части',r.res);
+ ok(r.res.sec,'в DEV есть раздел сюжетки №15 с номером части',r.res);
  ok(r.res.c.every(Boolean)&&['resume','skip','flags:cIntro,pRoof,pFount,pDk'].every(x=>r.calls.includes(x))&&r.calls.includes('start2')&&r.calls.filter(x=>x==='start2').length===1,'кнопки «продолжить», «пропустить», «все детали» работают',r.calls);
  ok(r.res.armed,'запуск части требует второго нажатия',r.res);
  const c2=await pg.evaluate(()=>new Promise(r=>setTimeout(()=>r(window.__c=1),200)));
