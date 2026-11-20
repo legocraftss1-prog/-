@@ -44,7 +44,12 @@
   function fmat(color, t, em) { return bldMat(color, t, em || TX.none); }
 
   /* ---------- геометрия ---------- */
-  function lohi(x, z, w, d, ry) { var cs = Math.cos(ry), sn = Math.sin(ry), lo = 1e9, hi = -1e9; [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2], [0, 0]].forEach(function (q) { var y = H(x + cs * q[0] + sn * q[1], z - sn * q[0] + cs * q[1]); lo = Math.min(lo, y); hi = Math.max(hi, y); }); return { lo: lo, hi: hi, base: hi - lo > .05 ? lo - 1.5 : lo }; }
+  // высоты под участком: сетка 5×5 точек (раньше 4 угла и центр — между ними земля могла быть ниже, и дом «висел»)
+  function lohi(x, z, w, d, ry) { var cs = Math.cos(ry), sn = Math.sin(ry), lo = 1e9, hi = -1e9;
+    for (var i = 0; i <= 4; i++) for (var j = 0; j <= 4; j++) { var lx = -w / 2 + w * i / 4, lz = -d / 2 + d * j / 4, y = H(x + cs * lx + sn * lz, z - sn * lx + cs * lz); lo = Math.min(lo, y); hi = Math.max(hi, y); }
+    return { lo: lo, hi: hi, base: lo - 1.2 }; }
+  // цоколь под тем, что стоит на верхней точке участка (заправки, закусочные, площадки, пристройки)
+  function plinth(x, z, w, d, ry, L, c) { if (L.hi - L.lo < .04) return; var g = grp(x, 0, z, ry); fbox(g, w, L.hi - L.base + .06, d, 0, L.base, 0, 0, fmat(c || '#b8b4aa', TX.metal, TX.none), 6); }
   // коробка с фасадной развёрткой (окна не растягиваются): cell — размер одного «квадрата» текстуры
   function fbox(par, w, h, d, x, y, z, ry, m, cell) {
     cell = cell || 12; var geo = new THREE.BoxGeometry(w, h, d), uv = geo.attributes.uv;
@@ -65,7 +70,7 @@
   /* ---------- разнообразие: один и тот же тип рядом не ставится ---------- */
   var RECENT = [];
   function far(type, x, z, r) { for (var i = 0; i < RECENT.length; i++) { var q = RECENT[i]; if (q.t === type && Math.hypot(q.x - x, q.z - z) < r) return false; } return true; }
-  function mark(type, x, z) { RECENT.push({ t: type, x: x, z: z }); C.stats[type] = (C.stats[type] || 0) + 1; }
+  function mark(type, x, z) { RECENT.push({ t: type, x: x, z: z }); C.stats[type] = (C.stats[type] || 0) + 1; if (/^(gas|diner|motel|bigbox|fastfood|dealer)$/.test(type)) C.stats.shopFronts = (C.stats.shopFronts || 0) + 1; }
   var usedText = {};
   function uniq(list) { var free = list.filter(function (t) { return !usedText[t]; }); var t = free.length ? pk(free) : pk(list); usedText[t] = true; return t; }
 
@@ -92,15 +97,15 @@
   var SHOPS = ['ПИЦЦА', 'ХИМЧИСТКА', 'АПТЕКА', 'КОФЕ', 'ТАТУ', 'ЦВЕТЫ', 'НОГТИ', 'ТАКО', 'ЛОМБАРД', 'КНИГИ', 'ВИДЕОПРОКАТ', 'ЗООМАГАЗИН', 'ОПТИКА', 'ПЕКАРНЯ', 'ПРАЧЕЧНАЯ', 'ЖЕЛЕЗНЫЙ ДВОРИК', 'СУШИ', 'ДОНАТЫ', 'БАРБЕРШОП', 'ТЕЛЕФОНЫ', 'ВИНИЛ', 'СПОРТ', 'ИГРУШКИ', 'ЧАСЫ'];
   var SIGNC = [['#c0392b', '#fff'], ['#1f4f8a', '#fff'], ['#f2c230', '#222'], ['#1f7a3a', '#fff'], ['#7a3a8a', '#fff'], ['#ffffff', '#c0392b'], ['#222', '#ffd23f'], ['#ff7aa8', '#fff']];
 
-  function storefrontSigns(x, z, ry, w, d, y) { var n = Math.max(1, Math.floor(w / 9)); for (var i = 0; i < n; i++) { var lx = -w / 2 + w * (i + .5) / n, p = loc(x, z, ry, lx, d / 2 + .08), t = uniq(SHOPS), c = pk(SIGNC); sg(t, Math.min(w / n - .8, Math.max(3, t.length * .36)), .8, p[0], y, p[1], ry, c[0], c[1], { fs: .5 }); } }
+  function storefrontSigns(x, z, ry, w, d, y) { var n = Math.max(1, Math.floor(w / 9)); C.stats.shopFronts = (C.stats.shopFronts || 0) + n; for (var i = 0; i < n; i++) { var lx = -w / 2 + w * (i + .5) / n, p = loc(x, z, ry, lx, d / 2 + .08), t = uniq(SHOPS), c = pk(SIGNC); sg(t, Math.min(w / n - .8, Math.max(3, t.length * .36)), .8, p[0], y, p[1], ry, c[0], c[1], { fs: .5 }); } }
   function awning(par, w, lz, y, c) { box(par, w, .15, 1.8, c, 0, y, lz + .9, [.18, 0, 0]); }
   function fireEscape(par, w, d, h, lo) { var lx = (R() - .5) * (w - 4); for (var f = 1; f < Math.floor(h / 3.2); f++) { var y = lo + f * 3.2; box(par, 2.6, .12, 1.1, 0x2a2a2a, lx, y, d / 2 + .6); box(par, 2.6, .9, .06, 0x2a2a2a, lx, y + .5, d / 2 + 1.12); box(par, .1, 3.2, .1, 0x2a2a2a, lx + (f % 2 ? .9 : -.9), y + 1.6, d / 2 + .9, [0, 0, f % 2 ? .5 : -.5]); } }
   function roofTank(par, lx, lz, y, s) { s = s || 1; for (var a = 0; a < 4; a++) box(par, .2, 2.2 * s, .2, 0x4a3a2a, lx + (a % 2 ? 1 : -1) * s, y + 1.1 * s, lz + (a < 2 ? 1 : -1) * s); M_(par, G.cyl, 0x8a6a48, [2.6 * s, 2.4 * s, 2.6 * s], [lx, y + 3.4 * s, lz]); M_(par, G.cone, 0x5a4a3a, [2.8 * s, 1.1 * s, 2.8 * s], [lx, y + 5.1 * s, lz]); }
   function rooftopJunk(par, w, d, top) { var n = Math.floor(R() * 4); for (var i = 0; i < n; i++) box(par, rr(1, 2.5), rr(.6, 1.6), rr(1, 2.5), pk([0x9aa0a8, 0xb8bcc4, 0x7a8088]), rr(-w / 2 + 2, w / 2 - 2), top + .5, rr(-d / 2 + 2, d / 2 - 2)); }
   function parking(x, z, ry, w, d, cars) {
-    var y = H(x, z); var g = grp(x, y, z, ry); box(g, w, .14, d, 0x3a3d44, 0, .08, 0);
+    var L = lohi(x, z, w, d, ry), y = L.hi; plinth(x, z, w, d, ry, L, '#8a8c90'); var g = grp(x, y, z, ry); box(g, w, .14, d, 0x3a3d44, 0, .08, 0);
     for (var lx = -w / 2 + 2.8; lx < w / 2 - 1; lx += 2.8) { box(g, .12, .02, 4.6, 0xe8e8e0, lx, .17, -d / 2 + 2.6); if (d > 12) box(g, .12, .02, 4.6, 0xe8e8e0, lx, .17, d / 2 - 2.6); }
-    var n = 0; for (lx = -w / 2 + 4.2; lx < w / 2 - 2 && n < (cars || 6); lx += 2.8) { if (R() < .45) continue; var p = loc(x, z, ry, lx, -d / 2 + 2.6); try { carH(p[0], p[1], ry + PI, pk(CAR_COLS)); n++; } catch (e) { } }
+    var n = 0; for (lx = -w / 2 + 4.2; lx < w / 2 - 2 && n < (cars || 6); lx += 2.8) { if (R() < .45) continue; var p = loc(x, z, ry, lx, -d / 2 + 2.6); try { var cg = carH(p[0], p[1], ry + PI, pk(CAR_COLS)); if (cg) { cg.position.y = y + .22; cg.rotation.x = 0; } n++; } catch (e) { } }
   }
   function polesign(x, z, ry, text, bg, fg, h, emoji) { var y = H(x, z); box(cityG, .35, h, .35, 0x6a6e76, x, y + h / 2, z); addColC(x, z, .25, y + h); sg(text, Math.max(3, text.length * .42), 1.3, x, y + h + .5, z, ry, bg, fg, { fs: .55 }); sg(text, Math.max(3, text.length * .42), 1.3, x, y + h + .5, z, ry + PI, bg, fg, { fs: .55 }); if (emoji) { var e = emojiSprite(emoji, 2.2); e.position.set(x, y + h + 2.6, z); cityG.add(e); } }
 
@@ -109,14 +114,14 @@
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), top = L.hi + D.h, t = R() < .5, m = fmat(pk(t ? GLASS : ['#e4e0d8', '#d8dcd4', '#efe6d4', '#c8ccd0', '#e8d8c8']), t ? TX.glass : TX.band, t ? TX.glassEm : TX.bandEm), g = grp(x, 0, z, ry);
         var o = fbox(g, D.w, top - L.base, D.d, 0, L.base, 0, 0, m, t ? 8 : 12); camBlock.city.push(o);
         if (R() < .5) { var h2 = rr(4, 10); fbox(g, D.w * .62, h2, D.d * .62, 0, top, 0, 0, m, t ? 8 : 12); top += h2; }
-        box(g, D.w + .3, .5, D.d + .3, 0x6b6e75, 0, top + .25, 0); rooftopJunk(g, D.w * .6, D.d * .6, top); fbox(g, D.w * .8, 4, .4, 0, L.lo, D.d / 2 + .2, 0, fmat('#ffffff', TX.shop, TX.shopEm));
+        box(g, D.w + .3, .5, D.d + .3, 0x6b6e75, 0, top + .25, 0); rooftopJunk(g, D.w * .6, D.d * .6, top); fbox(g, D.w * .8, L.lo + 4 - L.base, .4, 0, L.base, D.d / 2 + .2, 0, fmat('#ffffff', TX.shop, TX.shopEm));
         col(x, z, D.w, D.d, ry, top); return top; } },
     rowhouse: { r: 40, dims: function () { var n = 2 + Math.floor(R() * 3), u = rr(6, 8); return { w: n * u, d: rr(11, 14), n: n, u: u }; },
       make: function (x, z, ry, D) { var g = grp(x, 0, z, ry), L = lohi(x, z, D.w, D.d, ry), top0 = 0;
         for (var i = 0; i < D.n; i++) { var lx = -D.w / 2 + D.u * (i + .5), h = rr(8, 16), m = fmat(pk(BRICK), TX.row, TX.rowEm), o = fbox(g, D.u - .05, L.hi + h - L.base, D.d, lx, L.base, 0, 0, m, 9); camBlock.city.push(o);
           var top = L.hi + h; top0 = Math.max(top0, top); box(g, D.u, .6, D.d + .3, pk([0xd8d0c0, 0x5a4a3a, 0xc8b8a0]), lx, top + .2, 0); box(g, D.u - .4, .25, .5, 0xe0d8c8, lx, top - .3, D.d / 2 + .2);
           if (R() < .55) { var gg = grp(0, 0, 0, 0); g.add(gg); gg.position.x = lx; fireEscape(gg, D.u, D.d, h, L.hi); }
-          if (R() < .5) storefrontSigns(x + Math.cos(ry) * lx, z - Math.sin(ry) * lx, ry, D.u, D.d, L.lo + 3.3);
+          if (R() < .2) storefrontSigns(x + Math.cos(ry) * lx, z - Math.sin(ry) * lx, ry, D.u, D.d, L.lo + 3.3);
           if (R() < .22) roofTank(g, lx + rr(-1, 1), rr(-2, 2), top + .5, rr(.8, 1)); }
         col(x, z, D.w, D.d, ry, top0); return top0; } },
     garage: { max: 6, r: 220, dims: function () { return { w: rr(26, 34), d: rr(26, 32) }; },
@@ -130,8 +135,8 @@
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), h = rr(4, 7.5), g = grp(x, 0, z, ry), o = fbox(g, D.w, L.hi + h - L.base, D.d, 0, L.base, 0, 0, fmat(pk(PAST.concat(BRICK)), TX.shop, TX.shopEm), 8);
         awning(g, D.w - 1, D.d / 2, L.lo + 2.9, pk([0xc0392b, 0x1f7a3a, 0x1f4f8a, 0xf2c230, 0xe8742a])); box(g, D.w + .3, .4, D.d + .3, 0x6b6e75, 0, L.hi + h + .2, 0);
         storefrontSigns(x, z, ry, D.w, D.d, L.lo + 3.9); col(x, z, D.w, D.d, ry, L.hi + h); return L.hi + h; } },
-    gas: { front: 0, back: 0, max: 5, r: 320, dims: function () { return { w: 26, d: 22 }; },
-      make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, L.hi, z, ry), brand = uniq(['ГУСЬОЙЛ', 'ЧЭАЙ-ПЕТРОЛ', 'МАРЬЯ-ГАЗ', 'БАТОН ФЬЮЭЛ', 'ДИКСИ-АЗС']), bc = pk([[0xd8342a, '#d8342a'], [0x1f7a3a, '#1f7a3a'], [0x1f4f8a, '#1f4f8a'], [0xf2a020, '#e8742a']]);
+    gas: { front: 0, back: 0, max: 3, r: 320, dims: function () { return { w: 26, d: 22 }; },
+      make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry); plinth(x, z, D.w, D.d, ry, L, '#9a9a96'); var g = grp(x, L.hi, z, ry), brand = uniq(['ГУСЬОЙЛ', 'ЧЭАЙ-ПЕТРОЛ', 'МАРЬЯ-ГАЗ', 'БАТОН ФЬЮЭЛ', 'ДИКСИ-АЗС']), bc = pk([[0xd8342a, '#d8342a'], [0x1f7a3a, '#1f7a3a'], [0x1f4f8a, '#1f4f8a'], [0xf2a020, '#e8742a']]);
         box(g, D.w, .25, D.d, 0x50545c, 0, .12, 0); box(g, 15, .9, 9, 0xf4f4f0, 0, 5.4, 4); box(g, 15.2, .35, 9.2, bc[0], 0, 4.95, 4);
         [[-6.5, 0], [6.5, 0], [-6.5, 8], [6.5, 8]].forEach(function (p) { box(g, .4, 5, .4, 0xdcdcd4, p[0], 2.5, p[1]); });
         [-3, 3].forEach(function (lx) { box(g, 1.2, .3, 6, 0xc8c8c0, lx, .3, 4); box(g, .8, 1.6, .6, bc[0], lx, 1.2, 2.3); box(g, .8, 1.6, .6, bc[0], lx, 1.2, 5.7); });
@@ -144,28 +149,28 @@
         [c1, c2, c3, c4].forEach(function (c) { addColC(c[0], c[1], .3, L.hi + 5); }); [-3, 3].forEach(function (lx) { var q = loc(x, z, ry, lx, 4); col(q[0], q[1], 1.2, 6, ry, L.hi + 1.6); });
         if (R() < .7) { var cp = loc(x, z, ry, 3, 4); try { carH(cp[0] + 1.6, cp[1], ry, pk(CAR_COLS)); } catch (e) { } }
         A.lm.push({ x: x, z: z, e: '⛽', n: 'Заправка ' + brand }); return L.hi + 6; } },
-    diner: { front: 0, back: 15, max: 5, r: 380, dims: function () { return { w: 18, d: 9 }; },
-      make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, L.hi, z, ry), name = uniq(['ЗАКУСОЧНАЯ «У ГУСЯ»', 'ДАЙНЕР «66»', 'ЗАКУСОЧНАЯ 24/7', 'БЛИННАЯ «ШОССЕ»', 'ДАЙНЕР «ЛУНА»']);
+    diner: { front: 0, back: 15, max: 3, r: 380, dims: function () { return { w: 18, d: 9 }; },
+      make: function (x, z, ry, D) { var L = lohi(x, z, D.w + 1, D.d, ry); plinth(x, z, D.w + 1.5, D.d + 1, ry, L, '#c8c4bc'); var g = grp(x, L.hi, z, ry), name = uniq(['ЗАКУСОЧНАЯ «У ГУСЯ»', 'ДАЙНЕР «66»', 'ЗАКУСОЧНАЯ 24/7', 'БЛИННАЯ «ШОССЕ»', 'ДАЙНЕР «ЛУНА»']);
         var steel = new THREE.MeshPhongMaterial({ color: 0xd8dce0, specular: 0xffffff, shininess: 80 });
         fbox(g, 12, 4, 7, 0, 0, 0, 0, fmat('#e8eef2', TX.shop, TX.shopEm), 5); [-6, 6].forEach(function (lx) { var c = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 4, 16, 1, false, lx < 0 ? PI : 0, PI), steel); c.position.set(lx, 2, 0); c.userData.st = true; g.add(c); });
         box(g, 19, .5, 7.4, 0xc0392b, 0, 1.2, 0); box(g, 19, .5, 7.4, 0xe8e8e8, 0, 4.1, 0); box(g, 2.2, .3, 3, 0xc0392b, 0, 3, 4.3, [.2, 0, 0]);
         var p = loc(x, z, ry, 0, 3.8); sg(name, Math.max(6, name.length * .4), 1.1, p[0], L.hi + 5.1, p[1], ry, '#1d2129', '#ff5aa0', { fs: .6 });
         var e = emojiSprite(pk(['🍔', '🥞', '🍟', '☕']), 2); var ep = loc(x, z, ry, 7, 0); e.position.set(ep[0], L.hi + 6.2, ep[1]); cityG.add(e);
         col(x, z, 19, 7, ry, L.hi + 4.4); parking(loc(x, z, ry, 0, -10)[0], loc(x, z, ry, 0, -10)[1], ry, 18, 8, 3); A.lm.push({ x: x, z: z, e: '🍔', n: name }); return L.hi + 4.4; } },
-    motel: { front: 12, back: 0, max: 5, r: 420, dims: function () { return { w: rr(30, 38), d: 10 }; },
+    motel: { front: 12, back: 0, max: 3, r: 420, dims: function () { return { w: rr(30, 38), d: 10 }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry), name = uniq(['МОТЕЛЬ «ГУСЬ»', 'МОТЕЛЬ «ПОБЕРЕЖЬЕ»', 'МОТЕЛЬ «ЗАКАТ»', 'МОТЕЛЬ «66»', 'МОТЕЛЬ «ЧЭАЙ»']), c = pk(PAST), dc = pk([0x2e86c1, 0xd35400, 0x1f7a3a, 0xc0392b]);
         fbox(g, D.w, L.hi + 6.4 - L.base, 7, 0, L.base, -1.5, 0, fmat(c, TX.shop, TX.none), 6); box(g, D.w + .6, .3, 3.4, 0xd8d4cc, 0, L.hi + 3.2, 3.2); box(g, D.w + .6, .4, 10, 0x8a6a5a, 0, L.hi + 6.6, .2, [-.06, 0, 0]);
         box(g, D.w, .9, .08, 0xe8e8e8, 0, L.hi + 3.8, 4.9); for (var lx = -D.w / 2 + 2; lx < D.w / 2 - 1; lx += 3.4) { box(g, 1, 2.1, .1, dc, lx, L.hi + 1.05, 2.05); box(g, 1, 2.1, .1, dc, lx, L.hi + 4.4, 2.05); box(g, .2, 3.2, .2, 0xd8d4cc, lx + 1.7, L.hi + 1.6, 4.8); }
         var s = loc(x, z, ry, D.w / 2 + 3, 6); polesign(s[0], s[1], ry, name, '#2a1a3a', '#ff7a3a', 8, '🛏️'); var s2 = loc(x, z, ry, D.w / 2 + 3, 6.2); sg('ЕСТЬ МЕСТА', 3.4, .7, s2[0], H(s[0], s[1]) + 7.3, s2[1], ry, '#111', '#5aff8a', { fs: .55 });
         col(x, z, D.w, 7, ry, L.hi + 6.6); var pp = loc(x, z, ry, 0, 11); parking(pp[0], pp[1], ry, D.w, 8, 5); A.lm.push({ x: x, z: z, e: '🛏️', n: name }); return L.hi + 6.6; } },
-    strip: { front: 26, back: 0, max: 4, r: 360, dims: function () { return { w: rr(40, 56), d: 14 }; },
+    strip: { front: 26, back: 0, max: 2, r: 360, dims: function () { return { w: rr(40, 56), d: 14 }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry), n = Math.floor(D.w / 10), h = rr(5, 6.5);
         fbox(g, D.w, L.hi + h - L.base, D.d, 0, L.base, 0, 0, fmat(pk(['#e8dcc4', '#d8d0c0', '#f0e4d0', '#e0d8e8']), TX.shop, TX.shopEm), 6); box(g, D.w + .4, 1.2, 1.2, pk([0x8a3a2a, 0x2a5a8a, 0x3a6a3a]), 0, L.hi + h - .2, D.d / 2 + .5);
         box(g, D.w, .3, 3, 0xd8d4cc, 0, L.hi + 3.4, D.d / 2 + 1.5); for (var i = 0; i <= n; i++) box(g, .3, 3.4, .3, 0xd8d4cc, -D.w / 2 + i * D.w / n, L.hi + 1.7, D.d / 2 + 2.8);
         storefrontSigns(x, z, ry, D.w, D.d + 2.4, L.hi + 4.4);
         var pp = loc(x, z, ry, 0, D.d / 2 + 14); parking(pp[0], pp[1], ry, D.w, 20, 10); var ps = loc(x, z, ry, D.w / 2 + 2, D.d / 2 + 22); polesign(ps[0], ps[1], ry, uniq(['ТЦ «БУЛЬВАР»', 'ПЛАЗА «ЧЭАЙ»', 'МОЛЛ «ГУСИНЫЙ»', 'ТЦ «ПРИБОЙ»']), '#1f4f8a', '#fff', 7);
         col(x, z, D.w, D.d, ry, L.hi + h); return L.hi + h; } },
-    bigbox: { front: 30, back: 0, max: 4, r: 600, dims: function () { return { w: rr(52, 64), d: rr(36, 42) }; },
+    bigbox: { front: 30, back: 0, max: 2, r: 600, dims: function () { return { w: rr(52, 64), d: rr(36, 42) }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry), name = uniq(['МЕГАМАРТ', 'ГУСЬ-ДЕПО', 'БАТОН-КЛАБ', 'ДИКСИ-СУПЕР']), c = pk([['#1f4f8a', '#ffd23f'], ['#e8742a', '#fff'], ['#c0392b', '#fff'], ['#1f7a3a', '#fff']]);
         fbox(g, D.w, L.hi + 10 - L.base, D.d, 0, L.base, 0, 0, fmat('#d8d4cc', TX.metal, TX.none), 4); box(g, 18, 3.4, 1, 0x30343c, 0, L.hi + 1.7, D.d / 2 + .5);
         var p = loc(x, z, ry, 0, D.d / 2 + .1); sg(name, Math.max(10, name.length * .9), 2.6, p[0], L.hi + 7.4, p[1], ry, c[0], c[1], { fs: .7 });
@@ -176,13 +181,13 @@
         for (var lx = -D.w / 2 + 5; lx < D.w / 2 - 3; lx += 7) box(g, 4, 4.4, .2, pk([0x5a6a7a, 0x7a6a5a, 0x4a5a4a]), lx, L.lo + 2.2, D.d / 2 + .1);
         var p = loc(x, z, ry, -D.w / 2 + 6, D.d / 2 + .12); sg('СКЛАД ' + (1 + Math.floor(R() * 40)), 5, 1, p[0], L.lo + 6, p[1], ry, '#1d2129', '#ffd23f', { fs: .6 });
         col(x, z, D.w, D.d, ry, L.hi + h); return L.hi + h; } },
-    fastfood: { front: 0, back: 13, max: 5, r: 300, dims: function () { return { w: 15, d: 12 }; },
+    fastfood: { front: 0, back: 13, max: 3, r: 300, dims: function () { return { w: 15, d: 12 }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry), K_ = [['БУРГЕРЫ «БАТОН»', '🍔', '#e8473b', '#ffd23f'], ['ТАКО «ГУСЬ»', '🌮', '#7a3a8a', '#ffd23f'], ['ПИЦЦА «МАРЬЯ»', '🍕', '#1f7a3a', '#fff'], ['КУРОЧКА «КЛЮВ»', '🍗', '#c0392b', '#fff'], ['ПОНЧИКИ «ДЫРКА»', '🍩', '#ff7aa8', '#fff']], k = K_.filter(function (q) { return !usedText[q[0]]; })[0] || K_[0]; usedText[k[0]] = true;
         fbox(g, D.w, L.hi + 4.6 - L.base, D.d, 0, L.base, 0, 0, fmat('#f4efe6', TX.shop, TX.shopEm), 6); box(g, D.w + .6, 1.2, D.d + .6, new THREE.Color(k[2]).getHex(), 0, L.hi + 5.1, 0);
         box(g, 3, 3, .3, 0x30343c, D.w / 2 - 2, L.hi + 1.5, -D.d / 2 - .2); var p = loc(x, z, ry, 0, D.d / 2 + .35); sg(k[0], Math.max(6, k[0].length * .38), .9, p[0], L.hi + 5.1, p[1], ry, k[2], k[3], { fs: .55 });
         var s = loc(x, z, ry, -D.w / 2 - 3, D.d / 2 + 3); polesign(s[0], s[1], ry, k[0], k[2], k[3], 9, k[1]); col(x, z, D.w, D.d, ry, L.hi + 5.7);
         var pp = loc(x, z, ry, 0, -D.d / 2 - 8); parking(pp[0], pp[1], ry, D.w + 6, 10, 4); return L.hi + 5.7; } },
-    dealer: { front: 16, back: 0, max: 3, r: 600, dims: function () { return { w: 24, d: 14 }; },
+    dealer: { front: 16, back: 0, max: 2, r: 600, dims: function () { return { w: 24, d: 14 }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry), name = uniq(['АВТОСАЛОН «ГУСЬ-МОТОРС»', 'АВТО «ПОБЕРЕЖЬЕ»', 'ПИКАПЫ «БИЗОН»']);
         fbox(g, D.w, L.hi + 6.5 - L.base, D.d, 0, L.base, 0, 0, fmat('#c8e0f0', TX.glass, TX.glassEm), 4); box(g, D.w + .6, .6, D.d + .6, 0xeeeeee, 0, L.hi + 6.8, 0);
         var p = loc(x, z, ry, 0, D.d / 2 + .1); sg(name, Math.max(8, name.length * .4), 1.1, p[0], L.hi + 5.6, p[1], ry, '#ffffff', '#c0392b', { fs: .55 });
@@ -191,14 +196,14 @@
         col(x, z, D.w, D.d, ry, L.hi + 6.8); A.lm.push({ x: x, z: z, e: '🚗', n: name }); return L.hi + 6.8; } },
     fire: { front: 10, back: 0, max: 2, r: 700, dims: function () { return { w: 20, d: 15 }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry), n = 1 + Math.floor(R() * 20);
-        fbox(g, D.w, L.hi + 8.5 - L.base, D.d, 0, L.base, 0, 0, fmat('#a8432e', TX.row, TX.rowEm), 8); fbox(g, 4.4, 15, 4.4, D.w / 2 - 2.2, L.hi, -D.d / 2 + 2.2, 0, fmat('#a8432e', TX.row, TX.rowEm), 8);
+        fbox(g, D.w, L.hi + 8.5 - L.base, D.d, 0, L.base, 0, 0, fmat('#a8432e', TX.row, TX.rowEm), 8); fbox(g, 4.4, L.hi + 15 - L.base, 4.4, D.w / 2 - 2.2, L.base, -D.d / 2 + 2.2, 0, fmat('#a8432e', TX.row, TX.rowEm), 8);
         [-6, 0, 6].forEach(function (lx) { box(g, 4.4, 4.6, .2, 0xc0392b, lx, L.lo + 2.3, D.d / 2 + .1); box(g, 4, .2, .1, 0xffffff, lx, L.lo + 3.4, D.d / 2 + .22); });
         var p = loc(x, z, ry, 0, D.d / 2 + .12); sg('ПОЖАРНАЯ ЧАСТЬ № ' + n, 8, 1, p[0], L.lo + 6, p[1], ry, '#f4f0e8', '#a8241e', { fs: .55 });
         var tp = loc(x, z, ry, 0, D.d / 2 + 6); try { var tr = grp(tp[0], H(tp[0], tp[1]), tp[1], ry + PI / 2); box(tr, 2.5, 2.4, 9, 0xc0392b, 0, 1.5, 0); box(tr, 2.4, 1.2, 2.6, 0xc0392b, 0, 3.1, 3); box(tr, .4, .3, 7, 0xd8d8d0, .7, 2.9, -1); addColR(tp[0], tp[1], 9, 2.5, ry + PI / 2, H(tp[0], tp[1]) + 2.8); } catch (e) { }
         col(x, z, D.w, D.d, ry, L.hi + 8.5); A.lm.push({ x: x, z: z, e: '🚒', n: 'Пожарная часть № ' + n }); return L.hi + 15; } },
     school: { front: 10, back: 14, max: 2, r: 900, dims: function () { return { w: 40, d: 16 }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry), n = 15 + Math.floor(R() * 80);
-        fbox(g, D.w, L.hi + 8 - L.base, D.d, 0, L.base, 0, 0, fmat('#b8684e', TX.row, TX.rowEm), 8); fbox(g, 12, 6.5, 14, -D.w / 2 + 6, L.hi, -D.d / 2 - 6, 0, fmat('#b8684e', TX.row, TX.rowEm), 8);
+        fbox(g, D.w, L.hi + 8 - L.base, D.d, 0, L.base, 0, 0, fmat('#b8684e', TX.row, TX.rowEm), 8); fbox(g, 12, L.hi + 6.5 - L.base, 14, -D.w / 2 + 6, L.base, -D.d / 2 - 6, 0, fmat('#b8684e', TX.row, TX.rowEm), 8);
         box(g, 8, 1, 3, 0xf0ece4, 0, L.hi + 3.6, D.d / 2 + 1.5); [-3, 3].forEach(function (lx) { M_(g, G.cyl, 0xf0ece4, [.6, 3.6, .6], [lx, L.hi + 1.8, D.d / 2 + 2.8]); });
         var p = loc(x, z, ry, 0, D.d / 2 + 3.1); sg('ШКОЛА № ' + n, 6, 1, p[0], L.hi + 4.8, p[1], ry, '#f0ece4', '#1f4f8a', { fs: .6 });
         var fp = loc(x, z, ry, D.w / 2 - 2, D.d / 2 + 6), fy = H(fp[0], fp[1]); box(cityG, .14, 10, .14, 0xdddddd, fp[0], fy + 5, fp[1]); box(cityG, 2, 1.2, .05, 0x1f4f8a, fp[0] + 1, fy + 9.3, fp[1]);
@@ -207,7 +212,7 @@
     church: { max: 1, r: 900, dims: function () { return { w: 11, d: 20 }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry);
         fbox(g, D.w, L.hi + 7 - L.base, D.d, 0, L.base, 0, 0, fmat('#f6f4ee', TX.row, TX.rowEm), 10); M_(g, G.box, 0x4a4a52, [D.w + 1, 1, D.d + .6], [0, L.hi + 9.2, 0], [0, 0, 0]); var roof = M_(g, pyrG, 0x4a4a52, [D.w + 1.2, 4, D.d + .8], [0, L.hi + 9, 0]); roof.scale.set(D.w + 1.2, 4, D.d + .8);
-        fbox(g, 4, 9, 4, 0, L.hi, D.d / 2 - 1, 0, fmat('#f6f4ee', TX.row, TX.rowEm), 10); M_(g, pyrG, 0xf6f4ee, [3.6, 8, 3.6], [0, L.hi + 13, D.d / 2 - 1]); box(g, .15, 1.6, .15, 0xd4a840, 0, L.hi + 17.8, D.d / 2 - 1); box(g, .9, .15, .15, 0xd4a840, 0, L.hi + 18.1, D.d / 2 - 1);
+        fbox(g, 4, L.hi + 9 - L.base, 4, 0, L.base, D.d / 2 - 1, 0, fmat('#f6f4ee', TX.row, TX.rowEm), 10); M_(g, pyrG, 0xf6f4ee, [3.6, 8, 3.6], [0, L.hi + 13, D.d / 2 - 1]); box(g, .15, 1.6, .15, 0xd4a840, 0, L.hi + 17.8, D.d / 2 - 1); box(g, .9, .15, .15, 0xd4a840, 0, L.hi + 18.1, D.d / 2 - 1);
         box(g, 1.8, 3, .2, 0x5a3a2a, 0, L.lo + 1.5, D.d / 2 + 1.1); col(x, z, D.w, D.d, ry, L.hi + 9); A.lm.push({ x: x, z: z, e: '⛪', n: 'Белая церковь' }); return L.hi + 17; } },
     bank: { max: 3, r: 500, dims: function () { return { w: 22, d: 16 }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry), stone = '#e8e0cc', name = uniq(['БАНК «ГУСИНЫЙ»', 'НАЦИОНАЛЬНЫЙ БАНК', 'СБЕРКАССА «ЧЭАЙ»']);
@@ -228,26 +233,26 @@
         var o = fbox(g, D.w, top - L.base, D.d, 0, L.base, 0, 0, fmat(c, TX.hotel, TX.hotelEm), 9); camBlock.city.push(o);
         if (R() < .5) { fbox(g, D.w * .4, top - L.base - rr(4, 10), D.d + 6, D.w * (R() < .5 ? -.3 : .3), L.base, 0, 0, fmat(c, TX.hotel, TX.hotelEm), 9); }
         box(g, D.w + .6, 1.4, D.d + .6, pk([0x3a8ac0, 0xe8742a, 0x2fae8a, 0xd84a6a]), 0, top + .7, 0); var p = loc(x, z, ry, 0, D.d / 2 + .5); sg(name, Math.max(8, name.length * .5), 1.6, p[0], top + 2.6, p[1], ry, '#ffffff', '#1f4f8a', { fs: .7 });
-        fbox(g, D.w * .7, 4, 2.5, 0, L.lo, D.d / 2 + 1.25, 0, fmat('#ffffff', TX.shop, TX.shopEm), 6);
+        fbox(g, D.w * .7, L.lo + 4 - L.base, 2.5, 0, L.base, D.d / 2 + 1.25, 0, fmat('#ffffff', TX.shop, TX.shopEm), 6);
         col(x, z, D.w, D.d, ry, top); A.lm.push({ x: x, z: z, e: '🏨', n: name }); return top; } },
     deco: { r: 60, dims: function () { return { w: rr(14, 20), d: rr(10, 14), h: rr(8, 14) }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry), c = pk(PAST), m = fmat(c, TX.shop, TX.shopEm), top = L.hi + D.h;
         fbox(g, D.w, top - L.base, D.d, 0, L.base, 0, 0, fmat(c, TX.row, TX.rowEm), 9); var cr = fcyl(g, D.d / 2.4, top - L.base, 16, D.w / 2 - .5, L.base, D.d / 2 - D.d / 2.4, 0, m, 8);
         box(g, D.w * .5, 2.2, .4, 0xffffff, 0, top + 1.1, D.d / 2 - .2); box(g, D.w * .3, 1.2, .4, 0xffffff, 0, top + 2.8, D.d / 2 - .2);
         var neon = new THREE.Mesh(G.box, lampMat); neon.scale.set(D.w, .15, .15); neon.position.set(0, top - 1.2, D.d / 2 + .1); neon.userData.st = true; g.add(neon);
-        var p = loc(x, z, ry, -D.w / 4, D.d / 2 + .25); sg(uniq(['КАФЕ «ОКЕАН»', 'ЛЕДЕНЦЫ', 'СУВЕНИРЫ', 'ДЖЕЛАТО', 'КОКТЕЙЛИ', 'СЁРФ-ШОП', 'ПЛЯЖНЫЙ БАР', 'КИНО «ПАЛЬМА»']), 6, .9, p[0], L.lo + 3.6, p[1], ry, '#ffffff', pk(['#e8473b', '#2a8ac0', '#d84a9a']), { fs: .55 });
+        var p = loc(x, z, ry, -D.w / 4, D.d / 2 + .25); if (R() < .45) { C.stats.shopFronts = (C.stats.shopFronts || 0) + 1; sg(uniq(['КАФЕ «ОКЕАН»', 'ЛЕДЕНЦЫ', 'СУВЕНИРЫ', 'ДЖЕЛАТО', 'КОКТЕЙЛИ', 'СЁРФ-ШОП', 'ПЛЯЖНЫЙ БАР', 'КИНО «ПАЛЬМА»']), 6, .9, p[0], L.lo + 3.6, p[1], ry, '#ffffff', pk(['#e8473b', '#2a8ac0', '#d84a9a']), { fs: .55 }); }
         col(x, z, D.w + 1, D.d, ry, top); return top; } },
     campus: { front: 20, back: 0, max: 6, r: 120, dims: function () { return { w: rr(28, 40), d: rr(16, 22), h: rr(9, 15) }; },
       make: function (x, z, ry, D) { var L = lohi(x, z, D.w, D.d, ry), g = grp(x, 0, z, ry), top = L.hi + D.h, m = fmat(pk(['#b8d8e8', '#c8e0d8', '#d8d0e8']), TX.glass, TX.glassEm);
-        fbox(g, D.w, top - L.base, D.d, 0, L.base, 0, 0, m, 6); fbox(g, D.w * .4, D.h * .6, D.d * 1.2, -D.w * .3, L.hi, 0, 0, fmat('#f0f0ec', TX.band, TX.bandEm), 8);
+        fbox(g, D.w, top - L.base, D.d, 0, L.base, 0, 0, m, 6); fbox(g, D.w * .4, L.hi + D.h * .6 - L.base, D.d * 1.2, -D.w * .3, L.base, 0, 0, fmat('#f0f0ec', TX.band, TX.bandEm), 8);
         box(g, D.w + .3, .4, D.d + .3, 0xd8d8d0, 0, top + .2, 0); var pp = loc(x, z, ry, 0, D.d / 2 + 12); parking(pp[0], pp[1], ry, D.w, 16, 7);
         col(x, z, D.w, D.d * 1.2, ry, top); return top; } }
   };
   var PLAN = {
-    W: [['rowhouse', 5], ['office', 5], ['apartment', 3], ['corner', 3], ['garage', 1], ['bank', 1], ['fire', 1], ['church', 1], ['school', 1], ['deco', 1], ['fastfood', 1]],
-    S: [['rowhouse', 4], ['office', 3], ['apartment', 3], ['corner', 3], ['deco', 2], ['diner', 1], ['gas', 1], ['motel', 1], ['strip', 1], ['fastfood', 1], ['bank', 1], ['fire', 1], ['school', 1], ['church', 1], ['garage', 1], ['dealer', 1]],
+    W: [['rowhouse', 5], ['office', 5], ['apartment', 5], ['corner', 1], ['garage', 1], ['bank', 1], ['fire', 1], ['church', 1], ['school', 1], ['deco', 1], ['fastfood', 1]],
+    S: [['rowhouse', 4], ['office', 3], ['apartment', 5], ['corner', 1], ['deco', 2], ['diner', 1], ['gas', 1], ['motel', 1], ['strip', 1], ['fastfood', 1], ['bank', 1], ['fire', 1], ['school', 1], ['church', 1], ['garage', 1], ['dealer', 1]],
     SC: [['hotel', 6], ['deco', 4], ['corner', 1], ['fastfood', 1]],
-    E: [['warehouse', 4], ['gas', 1], ['motel', 1], ['diner', 1], ['strip', 2], ['bigbox', 1], ['fastfood', 2], ['dealer', 1], ['office', 2], ['corner', 2], ['fire', 1], ['rowhouse', 1]],
+    E: [['warehouse', 4], ['gas', 1], ['motel', 1], ['diner', 1], ['strip', 2], ['bigbox', 1], ['fastfood', 2], ['dealer', 1], ['office', 2], ['corner', 1], ['apartment', 2], ['fire', 1], ['rowhouse', 1]],
     NE: [['campus', 4], ['office', 1], ['garage', 1]]
   };
   var PLAN2 = { W: [['apartment', 4], ['office', 3], ['garage', 1], ['rowhouse', 2]], S: [['apartment', 5], ['rowhouse', 2], ['office', 2], ['garage', 1]], SC: [['apartment', 3], ['hotel', 2], ['deco', 2]], E: [['warehouse', 4], ['apartment', 2], ['office', 1]], NE: [['campus', 1]] };

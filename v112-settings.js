@@ -284,7 +284,7 @@
     if (panel) return;
     panel = el('div'); panel.id = 'mgset';
     var box = el('div'); box.className = 'box';
-    var head = el('header'); head.appendChild(el('h1', '', '⚙️ Настройки · v1.20.0'));
+    var head = el('header'); head.appendChild(el('h1', '', '⚙️ Настройки · v1.21.0'));
     var x = el('button'); x.className = 'x'; x.textContent = '✕'; x.onclick = closePanel; head.appendChild(x);
     nav = el('nav'); body = el('div'); body.className = 'body';
     box.appendChild(head); box.appendChild(nav); box.appendChild(body); panel.appendChild(box); document.body.appendChild(panel);
@@ -429,7 +429,7 @@
       r.appendChild(y); r.appendChild(n); b.appendChild(r);
     }
     b.appendChild(H('О версии'));
-    b.appendChild(el('div', 'hint', 'МГИАГ 1.20.0 «Новые дела». Настройки хранятся на этом устройстве и сохраняются между запусками.'));
+    b.appendChild(el('div', 'hint', 'МГИАГ 1.21.0 «Новые дела». Настройки хранятся на этом устройстве и сохраняются между запусками.'));
   }
   function resetAll() {
     var G = GFX(); if (G) { G.reset(); G.set('classic'); G.setOpt('distC', 1); G.setOpt('res', 1); }

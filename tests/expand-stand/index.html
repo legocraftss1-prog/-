@@ -3173,7 +3173,7 @@ function renderPhone(){$('tabs').innerHTML='';const b=$('sheetBody');b.innerHTML
       if((slot==='hat'||slot==='glasses')&&o[slot])rowBtn(b,'🙅 Снять','','Снять',()=>{equip(slot,null);renderPhone();});
       if((slot==='hat'||slot==='glasses')&&!own.length)line('Пусто. Странные вещи — в «Одежде «Тренд».',15);});
     const s=document.createElement('div');s.className='sec';s.textContent='Причёски (уже были):';b.appendChild(s);
-    S.hairs[player.id].forEach(id=>{const on=o.hair===id;rowBtn(b,'✂️ '+HAIRS[id].n,on?'сейчас':'',on?'✓':'Сделать',()=>{o.hair=id;saveGame();rebuildChar(player);renderPhone();},on);});}
+    S.hairs[player.id].forEach(id=>{const on=o.hair===id;rowBtn(b,'✂️ '+HAIRS[id].n,on?'сейчас':'',on?'✓':'Сделать',()=>{o.hair=id;saveGame();rebuildChar(player);renderPhone();},on);});if(window.MG_LOOK2)MG_LOOK2.phone(b);}
   else if(phoneApp==='transport'){h.textContent='🚗 Транспорт — '+player.name;const own=S.vehicles[player.id];
     if(!own.length)line('Машин нет. Автосалон «Колёса» — в западном районе, у дороги. У Марьи хватит на «Копейку».');
     own.forEach(k=>{const T=VEH_TYPES[k];rowBtn(b,T.e+' '+T.n,'','Вызвать',()=>{closeModal();summonVehicle(k);});});
@@ -7049,6 +7049,7 @@ requestAnimationFrame(loop);init();
 <script src="../../v120-look.js"></script>
 <script src="../../v121-map.js"></script>
 <script src="../../v122-shops.js"></script>
+<script src="../../v123-look2.js"></script>
 <script src="../../v113-dev.js"></script>
 </body>
 </html>

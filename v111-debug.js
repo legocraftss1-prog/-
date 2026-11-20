@@ -49,7 +49,7 @@
   }
 
   /* ---------- точная проверка рядом (лучами) ---------- */
-  function targetsList() { var t = []; cityG.traverse(function (o) { if (o.isMesh && o.visible && !(o.userData && (o.userData.isLake || o.userData.noShadow))) t.push(o); }); return t; }
+  function targetsList() { var t = []; cityG.traverse(function (o) { if (o.isMesh && !(o.userData && (o.userData.isLake || o.userData.noShadow))) t.push(o); }); return t; }
   function rayCheck(c, rc, targets) {
     var cx = (c.x0 + c.x1) / 2, cz = (c.z0 + c.z1) / 2, y = H(cx, cz) + 1.0, M = 1.2, dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     for (var i = 0; i < 4; i++) {
@@ -74,7 +74,8 @@
       cols.filter(function (c) { return c.on !== false && c.x1 > p.x - 40 && c.x0 < p.x + 40 && c.z1 > p.z - 40 && c.z0 < p.z + 40 && (c.x1 - c.x0) < 200 && (c.z1 - c.z0) < 200; }).forEach(function (c) { if (!rayCheck(c, rc, tg)) suspects.push(c); });
       job = { stage: 'holes', p: p, R: 40, step: 3, i: 0, n: 0 }; prepHoles(job); return;
     }
-    var meshes = []; cityG.traverse(function (o) { if (o.isMesh && o.visible && o.geometry && o.geometry.attributes && o.geometry.attributes.position && !(o.userData && (o.userData.isLake || o.userData.noShadow)) && !isGroundMesh(o)) meshes.push(o); });
+    // все меши города, в том числе скрытые сейчас по дальности (раньше дальние куски не учитывались — отсюда ложные «стены»)
+    var meshes = []; cityG.traverse(function (o) { if (o.isMesh && o.geometry && o.geometry.attributes && o.geometry.attributes.position && !(o.userData && (o.userData.isLake || o.userData.noShadow)) && !isGroundMesh(o)) meshes.push(o); });
     job = { stage: 'index', p: p, R: R, meshes: meshes, mi: 0, ti: 0, cells: new Set(), list: null, ci: 0, step: R ? 5 : 12 };
     cityG.updateMatrixWorld(true);
   }
@@ -99,10 +100,10 @@
     for (var i = x0; i <= x1; i++) for (var j = z0; j <= z1; j++) if (C.has(i * 100003 + j)) return true; return false; }
   function stepCols(budget) { var J = job; while (budget-- > 0 && J.ci < J.list.length) { var c = J.list[J.ci++]; if (c.h !== undefined && c.h - H((c.x0 + c.x1) / 2, (c.z0 + c.z1) / 2) < .25) continue; if (!seen(c)) suspects.push(c); } if (J.ci >= J.list.length) { J.cells = null; prepHoles(J); } }
   function prepHoles(J) {
-    J.stage = 'holes'; J.gm = []; cityG.traverse(function (o) { if (o.isMesh && o.visible && isGroundMesh(o)) J.gm.push(o); }); if (window.MG_UNDERLAY) J.gm.push(MG_UNDERLAY);
+    J.stage = 'holes'; J.gm = []; cityG.traverse(function (o) { if (o.isMesh && isGroundMesh(o)) J.gm.push(o); });   // и скрытая по дальности земля тоже if (window.MG_UNDERLAY) J.gm.push(MG_UNDERLAY);
     var E = window.MG_EXPAND, lim = E && E.active ? 1700 : 742, R = J.R || lim;
     J.hx0 = Math.max(-lim, J.p.x - R); J.hx1 = Math.min(lim, J.p.x + R); J.hz0 = Math.max(-lim, J.p.z - R); J.hz1 = Math.min(lim, J.p.z + R); J.hx = J.hx0; J.hz = J.hz0;
-    J.rc = new THREE.Raycaster(); J.rc.far = 400; J.dn = new THREE.Vector3(0, -1, 0); J.o = new THREE.Vector3(); J.total = Math.ceil((J.hx1 - J.hx0) / J.step) * Math.ceil((J.hz1 - J.hz0) / J.step); J.done = 0;
+    J.rc = new THREE.Raycaster(); J.rc.far = 400; try { J.rc.layers.enableAll(); } catch (e) { } J.dn = new THREE.Vector3(0, -1, 0); J.o = new THREE.Vector3(); J.total = Math.ceil((J.hx1 - J.hx0) / J.step) * Math.ceil((J.hz1 - J.hz0) / J.step); J.done = 0;
     // для скорости — сетка мешей земли по клеткам 100 м
     J.gg = {}; J.gm.forEach(function (o) { if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere(); var bs = o.geometry.boundingSphere, c = bs.center.clone().applyMatrix4(o.matrixWorld), r = bs.radius;
       if (r > 900) { (J.gg.all = J.gg.all || []).push(o); return; } for (var i = Math.floor((c.x - r) / 100); i <= Math.floor((c.x + r) / 100); i++) for (var j = Math.floor((c.z - r) / 100); j <= Math.floor((c.z + r) / 100); j++) (J.gg[i + ',' + j] = J.gg[i + ',' + j] || []).push(o); });
@@ -115,7 +116,7 @@
       if (landHere(x, z) && (typeof area === 'undefined' || area === 'city')) {
         var h = H(x, z), L = (J.gg[Math.floor(x / 100) + ',' + Math.floor(z / 100)] || []).concat(J.gg.all || []);
         J.o.set(x, h + 60, z); J.rc.set(J.o, J.dn); var hit = L.length ? J.rc.intersectObjects(L, false) : [];
-        if (!hit.length) holes.push({ x: x, z: z, y: h, why: 'нет земли' }); else if (hit[0].point.y < h - 1.2) holes.push({ x: x, z: z, y: h, why: 'земля ниже на ' + (h - hit[0].point.y).toFixed(1) + ' м' });
+        if (!hit.length) holes.push({ x: x, z: z, y: h, why: 'нет земли' }); else if (hit[0].point.y < h - 1.6) holes.push({ x: x, z: z, y: h, why: 'земля ниже на ' + (h - hit[0].point.y).toFixed(1) + ' м' });
       }
       J.hx += J.step; if (J.hx >= J.hx1) { J.hx = J.hx0; J.hz += J.step; }
     }

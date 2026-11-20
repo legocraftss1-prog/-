@@ -129,10 +129,30 @@ const shops=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r
     const ex=inters.find(o=>o.area==='sh_'+d.id&&/Выйти/.test(o.label));ex.act();await W(1100);await drain();if(area!=='city')out.err.push(d.id+': не вышли');}
   out.labels=out.labels.size;out.items=invOf().length;out.wardrobe=S.wardrobe[player.id].filter(k=>CLOTHES[k]&&CLOTHES[k].shop).length;out.st=S.shops20;return out;});
 console.log('  точки:',JSON.stringify({placed:shops.placed,acts:shops.acts,items:shops.items,wardrobe:shops.wardrobe,labels:shops.labels}));
-T(shops.placed===17,'все 17 точек стоят в новом городе',shops.placed);
-T(shops.err.length===0,'во все 17 можно зайти и выйти; все их действия отрабатывают без ошибок',shops.err);
-T(shops.labels>=29,'у точек разные действия: уникальных '+shops.labels,shops.labels);
+T(shops.placed===18,'все 18 точек (17 + студия «Новое Я») стоят в новом городе',shops.placed);
+T(shops.err.length===0,'во все 18 можно зайти и выйти; все их действия отрабатывают без ошибок',shops.err);
+T(shops.labels>=33,'у точек разные действия: уникальных '+shops.labels,shops.labels);
 T(shops.wardrobe>=3&&shops.items>=5,'покупки работают (новые вещи в гардеробе и инвентаре)',shops);
+// модификация персонажа
+const lk=await pg.evaluate(async()=>{const W=r=>new Promise(f=>setTimeout(f,r));const p0=player;const cnt=()=>{let n=0;p0.g.traverse(o=>{if(o.isMesh)n++;});return n;};const n0=cnt(),sc0=p0.g.scale.x;
+  const l=MG_LOOK2;const L_=()=>S.look2[player.id];S.money[player.id]=1e6;
+  // лицо бесплатно
+  S.look2=S.look2||{};S.look2[player.id]=Object.assign(S.look2[player.id]||{},{face:'smile',eyes:'green',brows:'thick',custom:true});rebuildChar(player);const n1=cnt();
+  // студия: тату, макияж, борода, аксессуар, рост — через окна мастеров
+  const click=(re)=>{const b=[...document.querySelectorAll('#sheetBody .inv')].find(d=>re.test(d.textContent));if(!b)return false;b.querySelector('button').click();return true;};
+  MG_SHOPS.ensure('studio');l.openTattoo();await W(50);[...document.querySelectorAll('#sheetBody button')].find(b=>/Щека/.test(b.textContent)).click();await W(50);const t1=click(/Гусь/);closeModal();
+  l.openMakeup();await W(50);const t2=click(/Красная/);const t3=click(/Веснушки/);const t4=click(/Серьги/);closeModal();
+  L_().acc={};l.openStyle();await W(50);const t5=click(/^Борода/);const t6=click(/Шарф/);const t7=click(/Открыть настройку роста/);await W(50);[...document.querySelectorAll('#sheetBody button')].find(b=>b.textContent==='110%').click();closeModal();
+  await W(100);const n2=cnt(),sc2=p0.g.scale.x,L2=JSON.parse(JSON.stringify(L_()));
+  // телефон: раздел «Лицо и образ»
+  phoneApp='wardrobe';openModal('phone',renderPhone);await W(100);const ph=document.getElementById('sheetBody').textContent;closeModal();
+  // сохранение: перестройка из сохранения даёт тот же вид
+  rebuildChar(player);const n3=cnt();
+  return {n0,n1,n2,n3,sc0,sc2,clicks:[t1,t2,t3,t4,t5,t6,t7],L2,phone:/Лицо и образ/.test(ph)&&/Выражение лица/.test(ph)&&/Купленное/.test(ph)};});
+T(lk.n1>lk.n0,'выражение лица, глаза и брови меняют лицо (мешей '+lk.n0+' → '+lk.n1+')',lk);
+T(lk.clicks.every(Boolean)&&lk.L2.tat.cheek==='goose'&&lk.L2.lips==='red'&&lk.L2.freckles&&lk.L2.pierce.ears&&lk.L2.beard==='beard'&&lk.L2.acc.scarf&&lk.L2.height===1.1,'студия: тату, помада, веснушки, серьги, борода, шарф, рост 110% — покупаются и надеваются',lk);
+T(lk.n2>lk.n1&&lk.sc2>lk.sc0*1.08&&lk.n3===lk.n2,'на модели видны все изменения, рост вырос; после перестройки — то же самое',lk);
+T(lk.phone,'в телефоне (Гардероб) есть «Лицо и образ» и купленное',lk.phone);
 // мусор
 const lit=await pg.evaluate(()=>MG_CITY.stats.litter);
 T(lit>300,'мелочи в углах и на тротуарах: '+lit,lit);

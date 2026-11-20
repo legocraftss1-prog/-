@@ -236,7 +236,18 @@
   function flatEnough(x, z, r) { var mn = 1e9, mx = -1e9; for (var a = 0; a < 8; a++) { var h = gridH(x + Math.cos(a * PI / 4) * r, z + Math.sin(a * PI / 4) * r); mn = Math.min(mn, h); mx = Math.max(mx, h); } return mx - mn < Math.max(3, r * .6); }
   function okSpot(x, z, r, road) { return onLand(x, z, r) && flatEnough(x, z, r) && !nearRoad(x, z, r + (road === undefined ? 3 : road)) && freeAt(x, z, r); }
   E.okSpot = okSpot;
-  function house(x, z, w, d, h, ry, style, o) { if (!okSpot(x, z, Math.max(w, d) / 2 + 1)) return false; bldR(x, z, w, d, h, ry, style, o || {}); E.stats.houses = (E.stats.houses || 0) + 1; return true; }
+  /* дом игры (bldR) + цоколь: bldR меряет землю в 5 точках, а под домом она может быть ниже — тогда снизу добавляется бетонный цоколь */
+  function bldRx(x, z, w, d, h, ry, style, o) {
+    var r = bldR(x, z, w, d, h, ry, style, o);
+    try { var cs = Math.cos(ry), sn = Math.sin(ry), lo = 1e9, lo5 = 1e9, hi5 = -1e9;
+      [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2], [0, 0]].forEach(function (q) { var y = H(x + cs * q[0] + sn * q[1], z - sn * q[0] + cs * q[1]); lo5 = Math.min(lo5, y); hi5 = Math.max(hi5, y); });
+      var base = hi5 - lo5 > .05 ? lo5 - 1.5 : lo5;
+      for (var i = 0; i <= 4; i++) for (var j = 0; j <= 4; j++) { var lx = -w / 2 + w * i / 4, lz = -d / 2 + d * j / 4; lo = Math.min(lo, H(x + cs * lx + sn * lz, z - sn * lx + cs * lz)); }
+      if (lo < base - .03) { var m = new THREE.Mesh(G.box, mat(0xa8a49a)); m.scale.set(w + .1, base - lo + 1.2, d + .1); m.position.set(x, (base + lo - 1.2) / 2 + .02, z); m.rotation.y = ry; m.userData.st = true; cityG.add(m); E.stats.plinths = (E.stats.plinths || 0) + 1; } } catch (e) { }
+    return r;
+  }
+  function minH(x, z, r) { var m = H(x, z); for (var a = 0; a < 8; a++) m = Math.min(m, H(x + Math.cos(a * PI / 4) * r, z + Math.sin(a * PI / 4) * r)); return m; }
+  function house(x, z, w, d, h, ry, style, o) { if (!okSpot(x, z, Math.max(w, d) / 2 + 1)) return false; bldRx(x, z, w, d, h, ry, style, o || {}); E.stats.houses = (E.stats.houses || 0) + 1; return true; }
   /* дома вдоль дороги: по обе стороны, с разными отступами и размерами */
   function alongRoad(P, spacing, fn) { var L = resample(P, spacing); for (var i = 1; i < L.length - 1; i++) { var p = L[i], q = L[i + 1], a = Math.atan2(q[0] - p[0], q[1] - p[1]); for (var s = -1; s <= 1; s += 2) fn(p[0], p[1], a, s, i); } }
   function streetHouses(ri, spacing, off, mk) { var r = RD[ri]; alongRoad(r.P, spacing, function (x, z, a, s, i) { if (R() < .18) return; var o = r.w / 2 + off + R() * 4, px = x + Math.cos(a) * o * s, pz = z - Math.sin(a) * o * s; mk(px, pz, a + (s > 0 ? PI / 2 : -PI / 2), i); }); }
@@ -250,7 +261,7 @@
   }
   function pine(x, z, s) { s = s || 1; var y = H(x, z); M_(cityG, G.cyl, 0x5b3d29, [.34 * s, 3 * s, .34 * s], [x, y + 1.5 * s, z]); M_(cityG, G.cone, pineMat, [2.8 * s, 3.4 * s, 2.8 * s], [x, y + 3.6 * s, z]); M_(cityG, G.cone, pineMat, [2.1 * s, 2.8 * s, 2.1 * s], [x, y + 5.2 * s, z]); M_(cityG, G.cone, pineMat, [1.3 * s, 2.2 * s, 1.3 * s], [x, y + 6.6 * s, z]); addColC(x, z, .35, y + 5); }
   function umbrella(x, z) { var y = H(x, z), c = pk([0xe8473b, 0xf2c230, 0x3a8ae0, 0x2fae5b, 0xffffff]); M_(cityG, G.cyl, 0xdddddd, [.08, 2.4, .08], [x, y + 1.2, z]); M_(cityG, G.cone, c, [2.6, .7, 2.6], [x, y + 2.5, z]); M_(cityG, G.box, 0xf4f0e4, [.7, .12, 1.8], [x + 1, y + .25, z + .3]); }
-  function kiosk(x, z, ry, emoji, label, color) { bldR(x, z, 3.2, 2.6, 2.6, ry, 'panel', { color: color || '#f6e6b8', doors: 0 }); var sp = emojiSprite(emoji, 1.2); sp.position.set(x, H(x, z) + 3.6, z); cityG.add(sp); if (label) try { signH(label, 3, .5, x + Math.sin(ry) * 1.45, 2.4, z + Math.cos(ry) * 1.45, ry, '#ffffff', '#1d2129', { fs: .3 }); } catch (e) { } }
+  function kiosk(x, z, ry, emoji, label, color) { bldRx(x, z, 3.2, 2.6, 2.6, ry, 'panel', { color: color || '#f6e6b8', doors: 0 }); var sp = emojiSprite(emoji, 1.2); sp.position.set(x, H(x, z) + 3.6, z); cityG.add(sp); if (label) try { signH(label, 3, .5, x + Math.sin(ry) * 1.45, 2.4, z + Math.cos(ry) * 1.45, ry, '#ffffff', '#1d2129', { fs: .3 }); } catch (e) { } }
   /* первая вода при движении от z0 в сторону dir; высота настила — чуть выше берега */
   function shoreZ(x, z0, dir) { for (var z = z0; Math.abs(z - z0) < 900; z += 2 * dir) { if (isWater(x, z) || gridH(x, z) < -.3) { var y = Math.max(.75, gridH(x, z - 8 * dir) + .25); return { z: z, y: y }; } } return { z: z0, y: 1 }; }
   function deck(x0, x1, z0, z1, y, posts) {
@@ -300,7 +311,7 @@
   }
   function lighthouse(x, z) {
     if (!onLand(x, z, 3)) { for (var r = 0; r < 120 && !onLand(x, z, 3); r += 6) { x -= Math.cos(1.02) * 6; z -= Math.sin(1.02) * 6; } }
-    var y = H(x, z); for (var i = 0; i < 8; i++) M_(cityG, G.cyl, i % 2 ? 0xe8473b : 0xffffff, [4.6 - i * .3, 3, 4.6 - i * .3], [x, y + 1.5 + i * 3, z]);
+    var y = minH(x, z, 2.4) - .3; for (var i = 0; i < 8; i++) M_(cityG, G.cyl, i % 2 ? 0xe8473b : 0xffffff, [4.6 - i * .3, 3, 4.6 - i * .3], [x, y + 1.5 + i * 3, z]);
     M_(cityG, G.cyl, new THREE.MeshBasicMaterial({ color: 0xfff2a8 }), [2.4, 2.4, 2.4], [x, y + 25.5, z], null, false); M_(cityG, G.cone, 0xe8473b, [3, 2, 3], [x, y + 27.7, z]);
     var beam = new THREE.Mesh(new THREE.ConeGeometry(4, 60, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff2a8, transparent: true, opacity: .18, depthWrite: false, side: THREE.DoubleSide }));
     beam.rotation.z = PI / 2; var piv = new THREE.Group(); piv.position.set(x, y + 25.5, z); piv.add(beam); beam.position.x = 30; cityG.add(piv); E.beam = piv;
@@ -320,12 +331,12 @@
     cableCar([470, -1010], [520, -1295]);
     // термы
     var T = [-560, -1250];
-    for (k = 0; k < 3; k++) { var dx = T[0] - 30 + k * 30, dz = T[1] + (k % 2) * 12; if (!onLand(dx, dz, 8)) continue; var y = H(dx, dz); M_(cityG, G.hemi, 0xe8d8c8, [9, 6, 9], [dx, y, dz]); M_(cityG, G.box, 0x3ac0e8, [10, .2, 6], [dx, y + .15, dz + 13]); addColC(dx, dz, 9, y + 6); var st = emojiSprite('♨️', 1.6); st.position.set(dx, y + 2, dz + 13); cityG.add(st); }
+    for (k = 0; k < 3; k++) { var dx = T[0] - 30 + k * 30, dz = T[1] + (k % 2) * 12; if (!onLand(dx, dz, 8)) continue; var y = minH(dx, dz, 9) - .2; M_(cityG, G.hemi, 0xe8d8c8, [9, 6, 9], [dx, y, dz]); M_(cityG, G.box, 0x3ac0e8, [10, .2, 6], [dx, y + .15, dz + 13]); addColC(dx, dz, 9, y + 6); var st = emojiSprite('♨️', 1.6); st.position.set(dx, y + 2, dz + 13); cityG.add(st); }
     E.lm.push({ x: T[0], z: T[1], e: '♨️', n: 'Термы' });
     addI({ p: function () { return E.active ? { x: T[0], z: T[1] + 22 } : null; }, r: 4, label: '♨️ Погреться в термах', act: function () { cutscene(async function () { await fade(1, 500, '♨️ …'); await wait(1200); await fade(0, 500); await say([['gus', 'Я — суп. Я тёплый суп из гуся.'], ['marya', 'Не говори так. Но да.']]); }); } });
   }
   function cableCar(a, b) {
-    var ya = H(a[0], a[1]), yb = H(b[0], b[1]);
+    var ya = minH(a[0], a[1], 5) - .3, yb = minH(b[0], b[1], 6) - .3;
     if (!onLand(a[0], a[1], 4) || !onLand(b[0], b[1], 4)) { E.stats.cableFail = true; }
     M_(cityG, G.box, 0xd8d0c0, [8, 5, 6], [a[0], ya + 2.5, a[1]]); M_(cityG, G.box, 0xd8d0c0, [10, 4, 8], [b[0], yb + 2, b[1]]); addColR(a[0], a[1], 8, 6, 0, ya + 5); addColR(b[0], b[1], 10, 8, 0, yb + 4);
     var L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(2, Math.round(L / 70)), towers = [];
